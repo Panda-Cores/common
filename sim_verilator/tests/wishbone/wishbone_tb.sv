@@ -19,19 +19,20 @@ module wishbone_tb
 (
     input logic         clk,
     input logic         rstn_i,
-    input logic [31:0]  m0data_i,
-    output logic [31:0] m0data_o,
-    input logic [31:0]  m0addr_i,
-    input logic [3:0]   m0we_i,
-    input logic         m0valid_i,
-    output logic        m0valid_o
+    input logic [1:0][31:0]  mdata_i,
+    output logic [1:0][31:0] mdata_o,
+    input logic [1:0][31:0]  maddr_i,
+    input logic [1:0][3:0]   mwe_i,
+    input logic [1:0]        mvalid_i,
+    output logic [1:0]       mvalid_o
 );
 /* verilator lint_off PINMISSING */
 /* verilator lint_off UNDRIVEN */
 
-parameter N_MASTER = 1;
+parameter N_MASTER = 2;
 parameter N_SLAVE = 2;
 
+//master0
 logic [31:0] m0dat_i;
 logic [31:0] m0dat_o;
 logic [31:0] m0adr_o;
@@ -40,6 +41,16 @@ logic        m0cyc_o;
 logic        m0stb_o;
 logic        m0we_o;
 logic [3:0]  m0sel_o;
+
+//master1
+logic [31:0] m1dat_i;
+logic [31:0] m1dat_o;
+logic [31:0] m1adr_o;
+logic        m1ack_i;
+logic        m1cyc_o;
+logic        m1stb_o;
+logic        m1we_o;
+logic [3:0]  m1sel_o;
 
 //slave0
 logic [31:0] s0dat_o;
@@ -53,12 +64,12 @@ logic [31:0] s1dat_i;
 logic [31:0] s1adr_i;
 logic        s1ack_o;
 
-logic [3:0]             mi_sel;
-logic                   mi_stb;
-logic                   mi_cyc;
-logic                   mi_we;
-logic [31:0]            mi_adr;
-logic [31:0]            mi_dat;
+logic [N_MASTER-1:0][3:0]             mi_sel;
+logic [N_MASTER-1:0]                  mi_stb;
+logic [N_MASTER-1:0]                  mi_cyc;
+logic [N_MASTER-1:0]                  mi_we;
+logic [N_MASTER-1:0][31:0]            mi_adr;
+logic [N_MASTER-1:0][31:0]            mi_dat;
 
 logic [31:0]            im_dat;
 logic [N_MASTER-1:0]    im_gnt;
@@ -97,12 +108,12 @@ logic        s1we;
 assign s0wes = (s0we) ? s0sel : 'b0;
 assign s1wes = (s1we) ? s1sel : 'b0;
 
-assign mi_dat = m0dat_o;
-assign mi_adr = m0adr_o;
-assign mi_cyc = m0cyc_o;
-assign mi_sel = m0sel_o;
-assign mi_stb = m0stb_o;
-assign mi_we  = m0we_o;
+assign mi_dat = {m1dat_o, m0dat_o};
+assign mi_adr = {m1adr_o, m0adr_o};
+assign mi_cyc = {m1cyc_o, m0cyc_o};
+assign mi_sel = {m1sel_o, m0sel_o};
+assign mi_stb = {m1stb_o, m0stb_o};
+assign mi_we  = {m1we_o, m0we_o};
 
 assign si_dat = {s1dat_o, s0dat_o};
 assign si_ack = {s1ack_o, s0ack_o};
@@ -148,12 +159,12 @@ wishbone_master #(
 ) wbmaster0 (
     .clk_i      ( clk       ),
     .rst_i      ( ~rstn_i   ),
-    .data_i     ( m0data_i  ),
-    .data_o     ( m0data_o  ),
-    .addr_i     ( m0addr_i  ),
-    .we_i       ( m0we_i    ),
-    .valid_i    ( m0valid_i ),
-    .valid_o    ( m0valid_o ),
+    .data_i     ( mdata_i[0]  ),
+    .data_o     ( mdata_o[0]  ),
+    .addr_i     ( maddr_i[0]  ),
+    .we_i       ( mwe_i[0]    ),
+    .valid_i    ( mvalid_i[0] ),
+    .valid_o    ( mvalid_o[0] ),
     .wb_dat_i   ( im_dat    ),
     .wb_dat_o   ( m0dat_o   ),
     .wb_adr_o   ( m0adr_o   ),
@@ -163,6 +174,28 @@ wishbone_master #(
     .wb_stb_o   ( m0stb_o   ),
     .wb_we_o    ( m0we_o    ),
     .wb_gnt_i   ( im_gnt[0] )
+);
+
+wishbone_master #(
+    .TAGSIZE    (1)
+) wbmaster1 (
+    .clk_i      ( clk       ),
+    .rst_i      ( ~rstn_i   ),
+    .data_i     ( mdata_i[1]  ),
+    .data_o     ( mdata_o[1]  ),
+    .addr_i     ( maddr_i[1]  ),
+    .we_i       ( mwe_i[1]    ),
+    .valid_i    ( mvalid_i[1] ),
+    .valid_o    ( mvalid_o[1] ),
+    .wb_dat_i   ( im_dat    ),
+    .wb_dat_o   ( m1dat_o   ),
+    .wb_adr_o   ( m1adr_o   ),
+    .wb_ack_i   ( im_ack    ),
+    .wb_cyc_o   ( m1cyc_o   ),
+    .wb_sel_o   ( m1sel_o   ),
+    .wb_stb_o   ( m1stb_o   ),
+    .wb_we_o    ( m1we_o    ),
+    .wb_gnt_i   ( im_gnt[1] )
 );
 
 wishbone_slave #(

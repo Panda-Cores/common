@@ -9,32 +9,33 @@ static int t_cnt = 0;
 static Vwishbone_tb* top = new Vwishbone_tb;
 VerilatedVcdC* tfp = new VerilatedVcdC;
 
-int write_test(int addr, int data){
-    t_cnt++;
-    top->eval();
-    tfp->dump(t_cnt);
-    top->clk = !top->clk;
-    t_cnt++;
-    top->eval();
-    tfp->dump(t_cnt);
-    top->clk = !top->clk;
+int write_test(int master, int addr, int data){
     int count = 0;
-    top->m0data_i = data;
-    top->m0valid_i = 1;
-    top->m0we_i = 0b1111;
-    top->m0addr_i = addr;
-    while(top->m0valid_o != 1 && count < 10){
+    t_cnt++;
+    top->eval();
+    tfp->dump(t_cnt);
+    top->clk = !top->clk;
+    t_cnt++;
+    top->eval();
+    tfp->dump(t_cnt);
+    top->clk = !top->clk;
+
+    top->mdata_i = (uint64_t) data << (master * 32);
+    top->mvalid_i = 1 << master;
+    top->mwe_i = 0b1111 << (master * 4);
+    top->maddr_i = (uint64_t) addr << (master * 32);
+    while((top->mvalid_o & (1 << master)) == 0 && count < 10){
         t_cnt++;
         top->eval();
         tfp->dump(t_cnt);
         top->clk = !top->clk;
         count++;
     }
-    top->m0valid_i = 0;
+    top->mvalid_i = 0;
     return 0;
 }
 
-int read_test(int addr, int expected_data){
+int read_test(int master, int addr, int expected_data){
     t_cnt++;
     top->eval();
     tfp->dump(t_cnt);
@@ -43,20 +44,22 @@ int read_test(int addr, int expected_data){
     top->eval();
     tfp->dump(t_cnt);
     top->clk = !top->clk;
+
     int count = 0;
-    top->m0valid_i = 1;
-    top->m0we_i = 0b0000;
-    top->m0addr_i = addr;
-    while(top->m0valid_o != 1 && count < 10){
+    top->mdata_i = (uint64_t) 0 << (master * 32);
+    top->mwe_i = 0b0 << (master * 4);
+    top->mvalid_i = (1 << master);
+    top->maddr_i = (uint64_t) addr << (master * 32);
+    while((top->mvalid_o & (1 << master)) == 0 && count < 10){
         t_cnt++;
         top->eval();
         tfp->dump(t_cnt);
         top->clk = !top->clk;
         count++;
     }
-    top->m0valid_i = 0;
-    if(top->m0data_o != expected_data)
-        return top->m0data_o;
+    top->mvalid_i = 0;
+    if((uint32_t) (top->mdata_o  >> (32*master)) != expected_data)
+        return 1;
     return 0;
 }
 
@@ -81,40 +84,77 @@ int main(int argc, char** argv, char** env) {
     top->rstn_i = 1;
 
     // Run tests
-    write_test(0x0, 0xababcdc1);
-    write_test(0x4, 0xababcdc2);
-    write_test(0x8, 0xababcdc3);
-    write_test(0xc, 0xababcdc4);
-    write_test(0x10, 0xababcdc5);
-    write_test(0x14, 0xababcdc6);
-    if(result = read_test(0x0, 0xababcdc1) != 0)
+    write_test(0, 0x0, 0xababcdc1);
+    write_test(0, 0x4, 0xababcdc2);
+    write_test(0, 0x8, 0xababcdc3);
+    write_test(0, 0xc, 0xababcdc4);
+    write_test(0, 0x10, 0xababcdc5);
+    write_test(0, 0x14, 0xababcdc6);
+    if(result = read_test(0, 0x0, 0xababcdc1) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
 
-    if(result = read_test(0x4, 0xababcdc2) != 0)
+    if(result = read_test(0, 0x4, 0xababcdc2) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
 
-    if(result = read_test(0x8, 0xababcdc3) != 0)
+    if(result = read_test(0, 0x8, 0xababcdc3) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
 
-    if(result = read_test(0xc, 0xababcdc4) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-    
-
-    if(result = read_test(0x10, 0xababcdc5) != 0)
+    if(result = read_test(0, 0xc, 0xababcdc4) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
     
 
-    if(result = read_test(0x14, 0xababcdc6) != 0)
+    if(result = read_test(0, 0x10, 0xababcdc5) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+    
+    if(result = read_test(0, 0x14, 0xababcdc6) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+
+
+    write_test(1, 0x0, 0xababcd11);
+    write_test(1, 0x4, 0xababcd12);
+    write_test(1, 0x8, 0xababcd13);
+    write_test(1, 0xc, 0xababcd14);
+    write_test(1, 0x10, 0xababcd15);
+    write_test(1, 0x14, 0xababcd16);
+    if(result = read_test(1, 0x0, 0xababcd11) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+
+    if(result = read_test(1, 0x4, 0xababcd12) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+
+    if(result = read_test(1, 0x8, 0xababcd13) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+
+    if(result = read_test(1, 0xc, 0xababcd14) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;    
+
+    if(result = read_test(1, 0x10, 0xababcd15) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+    
+
+    if(result = read_test(1, 0x14, 0xababcd16) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
