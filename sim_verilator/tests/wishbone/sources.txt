@@ -1,5 +1,0 @@
-
-../../../rtl/wishbone/wishbone_interconnect.sv
-../../../rtl/wishbone/wishbone_master.sv
-../../../rtl/wishbone/wishbone_slave.sv
-../../../rtl/memory/dual_ram.sv

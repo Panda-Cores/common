@@ -77,11 +77,11 @@ module wishbone_interconnect
     output logic [31:0]             ms_adr_o, // addr to slave
     output logic [TAGSIZE-1:0]      ms_tga_o, // addr tag
     // Sync
-    output logic                    ms_cyc_o, // Transaction cycle in progress
+    output logic [N_SLAVE-1:0]      ms_cyc_o, // Transaction cycle in progress
     output logic [TAGSIZE-1:0]      ms_tgc_o, // cyc tag
     output logic                    ms_ack_o, // master ack
     output logic [3:0]              ms_sel_o, // select where the data on the data bus (8-bit granularity assumed)
-    output logic                    ms_stb_o, // strobe out, valid data transmission
+    output logic [N_SLAVE-1:0]      ms_stb_o, // strobe out, valid data transmission
     output logic                    ms_we_o   // write enable
 );
 
@@ -89,6 +89,8 @@ logic [N_MASTER-1:0] master_arbiter_n;
 logic [N_MASTER-1:0] master_arbiter_q;
 logic [N_SLAVE-1:0]  slave_arbiter;
 logic [31:0]         ms_adr;
+logic                ms_cyc;
+logic                ms_stb;
 
 assign ms_adr_o = ms_adr;
 
@@ -114,10 +116,10 @@ begin
     ms_tgd_o = '0;
     ms_tga_o = '0;
     ms_ack_o = '0;
-    ms_cyc_o = '0;
+    ms_cyc   = '0;
     ms_tgc_o = '0;
     ms_sel_o = '0;
-    ms_stb_o = '0;
+    ms_stb   = '0;
     ms_we_o  = '0;
     for(int i = 0; i < N_MASTER; i = i + 1) begin
         if(master_arbiter_q == (1 << i)) begin
@@ -129,10 +131,10 @@ begin
             ms_tgd_o = ms_tgd_i[i];
             ms_tga_o = ms_tga_i[i];
             ms_ack_o = ms_ack_i[i];
-            ms_cyc_o = ms_cyc_i[i];
+            ms_cyc   = ms_cyc_i[i];
             ms_tgc_o = ms_tgc_i[i];
             ms_sel_o = ms_sel_i[i];
-            ms_stb_o = ms_stb_i[i];
+            ms_stb   = ms_stb_i[i];
             ms_we_o  =  ms_we_i[i];
         end
     end
@@ -145,7 +147,7 @@ always_comb
 begin
     slave_arbiter = 'b0;
     for(int i = 0; i < N_SLAVE; i = i + 1) begin
-        if((ms_adr > SSTART_ADDR[i]) && (ms_adr < SEND_ADDR[i]))
+        if((ms_adr >= SSTART_ADDR[i]) && (ms_adr <= SEND_ADDR[i]))
             slave_arbiter = 'b0 | (1 << i);
     end
 end
@@ -158,6 +160,8 @@ begin
     sm_tgd_o = 'b0;
     sm_err_o = 'b0;
     sm_rty_o = 'b0;
+    ms_cyc_o = 'b0;
+    ms_stb_o = 'b0;
     for(int i = 0; i < N_SLAVE; i = i + 1) begin
         if(slave_arbiter == (1 << i)) begin
             // mux the correct slave to master
@@ -166,6 +170,8 @@ begin
             sm_tgd_o = sm_tgd_i[i];
             sm_err_o = sm_err_i[i];
             sm_rty_o = sm_rty_i[i];
+            ms_cyc_o[i] = ms_cyc;
+            ms_stb_o[i] = ms_stb;
         end
     end
 end

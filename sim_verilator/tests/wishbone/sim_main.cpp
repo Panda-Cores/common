@@ -30,6 +30,7 @@ int write_test(int addr, int data){
         top->clk = !top->clk;
         count++;
     }
+    top->m0valid_i = 0;
     return 0;
 }
 
@@ -53,6 +54,7 @@ int read_test(int addr, int expected_data){
         top->clk = !top->clk;
         count++;
     }
+    top->m0valid_i = 0;
     if(top->m0data_o != expected_data)
         return top->m0data_o;
     return 0;
@@ -83,6 +85,8 @@ int main(int argc, char** argv, char** env) {
     write_test(0x4, 0xababcdcd);
     write_test(0x8, 0xababcdcd);
     write_test(0xc, 0xababcdcd);
+    write_test(0x10, 0xababcdcd);
+    write_test(0x14, 0xababcdcd);
     if(result = read_test(0x0, 0xababcdcd) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
@@ -99,6 +103,18 @@ int main(int argc, char** argv, char** env) {
         std::cout << "PASSED " << result << std::endl;
 
     if(result = read_test(0xc, 0xababcdcd) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+    
+
+    if(result = read_test(0x10, 0xababcdcd) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+    
+
+    if(result = read_test(0x14, 0xababcdcd) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;

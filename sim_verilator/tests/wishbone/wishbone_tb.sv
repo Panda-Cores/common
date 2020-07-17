@@ -30,7 +30,7 @@ module wishbone_tb
 /* verilator lint_off UNDRIVEN */
 
 parameter N_MASTER = 1;
-parameter N_SLAVE = 1;
+parameter N_SLAVE = 2;
 
 logic [31:0] m0dat_i;
 logic [31:0] m0dat_o;
@@ -41,10 +41,17 @@ logic        m0stb_o;
 logic        m0we_o;
 logic [3:0]  m0sel_o;
 
+//slave0
 logic [31:0] s0dat_o;
 logic [31:0] s0dat_i;
 logic [31:0] s0adr_i;
 logic        s0ack_o;
+
+//slave1
+logic [31:0] s1dat_o;
+logic [31:0] s1dat_i;
+logic [31:0] s1adr_i;
+logic        s1ack_o;
 
 logic [3:0]             mi_sel;
 logic                   mi_stb;
@@ -59,13 +66,36 @@ logic                   im_ack;
 
 logic [31:0]            is_adr;
 logic [31:0]            is_dat;
-logic                   is_cyc;
+logic [N_SLAVE-1:0]     is_cyc;
 logic [3:0]             is_sel;
-logic                   is_stb;
+logic [N_SLAVE-1:0]     is_stb;
 logic                   is_we;
 
-logic [31:0]            si_dat;
-logic                   si_ack;
+logic [N_SLAVE-1:0][31:0]            si_dat;
+logic [N_SLAVE-1:0]                  si_ack;
+
+//slave0
+logic [31:0] s0data_i;
+logic [31:0] s0data_o;
+logic [31:0] s0addr_o;
+logic        s0cyc_i;
+logic        s0stb_i;
+logic [3:0]  s0wes;
+logic [3:0]  s0sel;
+logic        s0we;
+
+//slave1
+logic [31:0] s1data_i;
+logic [31:0] s1data_o;
+logic [31:0] s1addr_o;
+logic        s1cyc_i;
+logic        s1stb_i;
+logic [3:0]  s1wes;
+logic [3:0]  s1sel;
+logic        s1we;
+
+assign s0wes = (s0we) ? s0sel : 'b0;
+assign s1wes = (s1we) ? s1sel : 'b0;
 
 assign mi_dat = m0dat_o;
 assign mi_adr = m0adr_o;
@@ -74,18 +104,22 @@ assign mi_sel = m0sel_o;
 assign mi_stb = m0stb_o;
 assign mi_we  = m0we_o;
 
-assign si_dat = s0dat_o;
-assign si_ack = s0ack_o;
+assign si_dat = {s1dat_o, s0dat_o};
+assign si_ack = {s1ack_o, s0ack_o};
+assign s0cyc_i = is_cyc[0];
+assign s1cyc_i = is_cyc[1];
+assign s0stb_i = is_stb[0];
+assign s1stb_i = is_stb[1];
 
 wishbone_interconnect #(
     .TAGSIZE    (1),
-    .N_SLAVE    ( 1 ),
-    .N_MASTER   ( 1 )
+    .N_SLAVE    ( N_SLAVE ),
+    .N_MASTER   ( N_MASTER )
 ) intercon (
     .clk_i      ( clk ),
     .rst_i      ( ~rstn_i ),
-    .SSTART_ADDR('h0       ),
-    .SEND_ADDR  ('h1f       ),
+    .SSTART_ADDR({32'h10, 32'h0}),
+    .SEND_ADDR  ({32'h1f, 32'hf}),
     // From master
     .ms_dat_i   ( mi_dat    ),
     .ms_adr_i   ( mi_adr    ),
@@ -146,20 +180,32 @@ wishbone_slave #(
     .wb_dat_i   ( is_dat   ),
     .wb_adr_i   ( is_adr   ),
     .wb_ack_o   ( s0ack_o  ),
-    .wb_cyc_i   ( is_cyc   ),
+    .wb_cyc_i   ( s0cyc_i  ),
     .wb_sel_i   ( is_sel   ),
-    .wb_stb_i   ( is_stb   ),
+    .wb_stb_i   ( s0stb_i   ),
     .wb_we_i    ( is_we    )
 );
 
-logic [31:0] s0data_i;
-logic [31:0] s0data_o;
-logic [31:0] s0addr_o;
-logic [3:0] s0wes;
-logic [3:0] s0sel;
-logic       s0we;
-
-assign s0wes = (s0we) ? s0sel : 'b0;
+wishbone_slave #(
+    .TAGSIZE    (1)
+) wbslave1 (
+    .clk_i      ( clk      ),
+    .rst_i      ( ~rstn_i  ),
+    .data_i     ( s1data_i ),
+    .data_o     ( s1data_o ),
+    .addr_o     ( s1addr_o   ),
+    .we_o       ( s1we     ),
+    .sel_o      ( s1sel    ),
+    .valid_i    ( 1'b1     ),
+    .wb_dat_o   ( s1dat_o  ),
+    .wb_dat_i   ( is_dat   ),
+    .wb_adr_i   ( is_adr   ),
+    .wb_ack_o   ( s1ack_o  ),
+    .wb_cyc_i   ( s1cyc_i   ),
+    .wb_sel_i   ( is_sel   ),
+    .wb_stb_i   ( s1stb_i   ),
+    .wb_we_i    ( is_we    )
+);
 
 dual_ram #(
     .SIZE ( 32 )
@@ -171,6 +217,18 @@ dual_ram #(
     .web_i      ( s0wes     ),
     .dinb_i     ( s0data_o  ),
     .doutb_o    ( s0data_i  )
+);
+
+dual_ram #(
+    .SIZE ( 32 )
+) slave1 (
+    .clk        ( clk       ),
+    .rstn_i     ( rstn_i    ),
+    .addrb_i    ( s1addr_o    ),
+    .enb_i      ( 1'b1      ),
+    .web_i      ( s1wes     ),
+    .dinb_i     ( s1data_o  ),
+    .doutb_o    ( s1data_i  )
 );
 
 endmodule

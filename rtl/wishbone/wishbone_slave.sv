@@ -56,7 +56,7 @@ always_comb
 begin
     wb_ack_o = 1'b0;
     // Answer to requests, but only if slave is ready
-    if(valid_i && (wb_cyc_i || wb_stb_i)) begin
+    if(valid_i && (wb_cyc_i && wb_stb_i)) begin
         wb_ack_o = 1'b1;
         addr_o   = wb_adr_i;
         data_o   = wb_dat_i;
