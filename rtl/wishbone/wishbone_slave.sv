@@ -19,7 +19,7 @@
 //
 // ------------------------------------------------------------
 
-module wishbone_master #(
+module wishbone_slave #(
     parameter TAGSIZE = 2
 )(
     input logic                     clk_i,
@@ -27,7 +27,8 @@ module wishbone_master #(
     input logic [31:0]              data_i,
     output logic [31:0]             data_o,
     output logic [31:0]             addr_o,
-    output logic [31:0]             we_o,
+    output logic                    we_o,
+    output logic [3:0]              sel_o,
     input logic                     valid_i,
     // Wishbone specifics
     // Data
@@ -59,6 +60,7 @@ begin
         data_o   = wb_dat_i;
         wb_dat_o = data_i;
         we_o     = wb_we_i;
+        sel_o    = wb_sel_i;
     end
 end
 

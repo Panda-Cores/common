@@ -54,7 +54,7 @@ module wishbone_master #(
     input logic                     wb_gnt_i
 );
 
-logic enum {IDLE, WRITE, READ} CS, NS;
+enum logic {IDLE, WRITE, READ} CS, NS;
 
 always_ff @(posedge clk_i, posedge rst_i) begin
     if(rst_i) begin
@@ -71,51 +71,53 @@ begin
     wb_dat_o = 'b0;
     wb_adr_o = 'b0;
     valid_o  = 1'b0;
+    wb_adr_o = addr_i;
 
     case(CS)
         IDLE: begin
             // Wait for a requested transaction
             if(valid_i) begin
                 wb_cyc_o = 1'b1;    // assert that we want to perform a transaction
-                if(wb_gnt_i) begin  // and wait for interconnect to grant us the bus
-                    if(we_i != 'b0)
-                        NS = WRITE;
-                    else
-                        NS = READ;
-                end
+                if(we_i != 'b0)     // and jump into respective state
+                    NS = WRITE;
+                else
+                    NS = READ;
             end
         end
 
         WRITE: begin
-            // Assert cyc, stb and we
+            // keep cyc asserted
             wb_cyc_o = 1'b1;
-            wb_stb_o = 1'b1;
-            wb_we_o  = 1'b1;
-            // Same granularity as write request
-            wb_sel_o = we_i;
-            // Assert address and data
-            wb_adr_o = addr_i;
-            wb_dat_o = data_i;
-            // When slave acknowledges the write, we return to idle and validate the write request
-            if(wb_ack_i) begin
-                NS      = IDLE
-                valid_o = 1'b1;
+            if(wb_gnt_i) begin  // wait for interconnect to grant us the bus
+                wb_stb_o = 1'b1;
+                wb_we_o  = 1'b1;
+                // Same granularity as write request
+                wb_sel_o = we_i;
+                // Assert address and data
+                wb_dat_o = data_i;
+                // When slave acknowledges the write, we return to idle and validate the write request
+                if(wb_ack_i) begin
+                    NS      = IDLE;
+                    valid_o = 1'b1;
+                end
             end
         end
 
         READ: begin        
-            // Assert cyc and stb    
+            // keep cyc asserted
             wb_cyc_o = 1'b1;
-            wb_stb_o = 1'b1;
-            // Same granularity as read request
-            wb_sel_o = we_i;
-            // Assert address
-            wb_adr_o = addr_i;
-            // When slave acknowledge the read, return to idle and validate read request
-            if(wb_ack_i) begin
-                NS      = IDLE
-                valid_o = 1'b1;
+            if(wb_gnt_i) begin  // wait for interconnect to grant us the bus
+                wb_stb_o = 1'b1;
+                // Same granularity as read request
+                wb_sel_o = we_i;
+                // Assert address
+                wb_adr_o = addr_i;
                 data_o  = wb_dat_i;
+                // When slave acknowledge the read, return to idle and validate read request
+                if(wb_ack_i) begin
+                    NS      = IDLE;
+                    valid_o = 1'b1;
+                end
             end
         end
 
