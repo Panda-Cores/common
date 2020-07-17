@@ -23,6 +23,7 @@
 module wishbone_master #(
     parameter TAGSIZE = 2
 )(
+/* verilator lint_off UNDRIVEN */
     input logic                     clk_i,
     input logic                     rst_i,
     input logic [31:0]              data_i,
@@ -38,7 +39,7 @@ module wishbone_master #(
     output logic [31:0]             wb_dat_o,  // data out
     output logic [TAGSIZE-1:0]      wb_tgd_o,  // data out tag
     // Address
-    output logic                    wb_adr_o,  // address out
+    output logic [31:0]             wb_adr_o,  // address out
     output logic [TAGSIZE-1:0]      wb_tga_o,  // address tag
     // Sync
     input logic                     wb_ack_i,  // acknowledge from slave
@@ -54,7 +55,7 @@ module wishbone_master #(
     input logic                     wb_gnt_i
 );
 
-enum logic {IDLE, WRITE, READ} CS, NS;
+enum logic [1:0] {IDLE, WRITE, READ} CS, NS;
 
 always_ff @(posedge clk_i, posedge rst_i) begin
     if(rst_i) begin

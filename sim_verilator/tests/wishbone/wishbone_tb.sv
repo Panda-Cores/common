@@ -27,6 +27,7 @@ module wishbone_tb
     output logic        m0valid_o
 );
 /* verilator lint_off PINMISSING */
+/* verilator lint_off UNDRIVEN */
 
 parameter N_MASTER = 1;
 parameter N_SLAVE = 1;
@@ -38,11 +39,12 @@ logic        m0ack_i;
 logic        m0cyc_o;
 logic        m0stb_o;
 logic        m0we_o;
-logic [3:0]  m0sel_i;
+logic [3:0]  m0sel_o;
 
 logic [31:0] s0dat_o;
 logic [31:0] s0dat_i;
 logic [31:0] s0adr_i;
+logic        s0ack_o;
 
 logic [3:0]             mi_sel;
 logic                   mi_stb;
@@ -50,22 +52,40 @@ logic                   mi_cyc;
 logic                   mi_we;
 logic [31:0]            mi_adr;
 logic [31:0]            mi_dat;
+
 logic [31:0]            im_dat;
 logic [N_MASTER-1:0]    im_gnt;
 logic                   im_ack;
+
 logic [31:0]            is_adr;
-logic [31:0]            si_dat;
 logic [31:0]            is_dat;
+logic                   is_cyc;
+logic [3:0]             is_sel;
+logic                   is_stb;
+logic                   is_we;
+
+logic [31:0]            si_dat;
+logic                   si_ack;
+
+assign mi_dat = m0dat_o;
+assign mi_adr = m0adr_o;
+assign mi_cyc = m0cyc_o;
+assign mi_sel = m0sel_o;
+assign mi_stb = m0stb_o;
+assign mi_we  = m0we_o;
+
+assign si_dat = s0dat_o;
+assign si_ack = s0ack_o;
 
 wishbone_interconnect #(
-    .TAGSIZE    ( 0 ),
+    .TAGSIZE    (1),
     .N_SLAVE    ( 1 ),
-    .N_MASTER   ( 1 ),
-    .SSTART_ADDR ( 'b0 ),
-    .SEND_ADDR  ( 'h1f)
+    .N_MASTER   ( 1 )
 ) intercon (
     .clk_i      ( clk ),
     .rst_i      ( ~rstn_i ),
+    .SSTART_ADDR('h0       ),
+    .SEND_ADDR  ('h1f       ),
     // From master
     .ms_dat_i   ( mi_dat    ),
     .ms_adr_i   ( mi_adr    ),
@@ -90,7 +110,7 @@ wishbone_interconnect #(
 );
 
 wishbone_master #(
-    .TAGSIZE    ( 0 )
+    .TAGSIZE    (1)
 ) wbmaster0 (
     .clk_i      ( clk       ),
     .rst_i      ( ~rstn_i   ),
@@ -112,25 +132,32 @@ wishbone_master #(
 );
 
 wishbone_slave #(
-    .TAGSIZE    ( 0 )
+    .TAGSIZE    (1)
 ) wbslave0 (
     .clk_i      ( clk      ),
     .rst_i      ( ~rstn_i  ),
     .data_i     ( s0data_i ),
     .data_o     ( s0data_o ),
-    .addr_o     ( s0addr   ),
+    .addr_o     ( s0addr_o   ),
     .we_o       ( s0we     ),
     .sel_o      ( s0sel    ),
     .valid_i    ( 1'b1     ),
     .wb_dat_o   ( s0dat_o  ),
-    .wb_dat_i   ( s0dat_i  ),
-    .wb_adr_i   ( s0adr_i  ),
+    .wb_dat_i   ( is_dat   ),
+    .wb_adr_i   ( is_adr   ),
     .wb_ack_o   ( s0ack_o  ),
-    .wb_cyc_i   ( s0cyc_i  ),
-    .wb_sel_i   ( s0sel_i  ),
-    .wb_stb_i   ( s0stb_i  ),
-    .wb_we_i    ( s0we_i   )
+    .wb_cyc_i   ( is_cyc   ),
+    .wb_sel_i   ( is_sel   ),
+    .wb_stb_i   ( is_stb   ),
+    .wb_we_i    ( is_we    )
 );
+
+logic [31:0] s0data_i;
+logic [31:0] s0data_o;
+logic [31:0] s0addr_o;
+logic [3:0] s0wes;
+logic [3:0] s0sel;
+logic       s0we;
 
 assign s0wes = (s0we) ? s0sel : 'b0;
 
@@ -139,7 +166,7 @@ dual_ram #(
 ) slave0 (
     .clk        ( clk       ),
     .rstn_i     ( rstn_i    ),
-    .addrb_i    ( s0addr    ),
+    .addrb_i    ( s0addr_o    ),
     .enb_i      ( 1'b1      ),
     .web_i      ( s0wes     ),
     .dinb_i     ( s0data_o  ),

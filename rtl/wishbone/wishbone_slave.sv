@@ -22,6 +22,7 @@
 module wishbone_slave #(
     parameter TAGSIZE = 2
 )(
+/* verilator lint_off UNDRIVEN */
     input logic                     clk_i,
     input logic                     rst_i,
     input logic [31:0]              data_i,
@@ -37,7 +38,7 @@ module wishbone_slave #(
     output logic [31:0]             wb_dat_o,  // data out
     output logic [TAGSIZE-1:0]      wb_tgd_o,  // data out tag
     // Address
-    input logic                     wb_adr_i,  // address out
+    input logic [31:0]              wb_adr_i,  // address out
     input logic [TAGSIZE-1:0]       wb_tga_i,  // address tag
     // Sync
     output logic                    wb_ack_o,  // acknowledge to master
@@ -49,6 +50,7 @@ module wishbone_slave #(
     input logic                     wb_stb_i,  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
     input logic                     wb_we_i   // write enable
 );
+
 
 always_comb
 begin

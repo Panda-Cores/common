@@ -25,26 +25,30 @@ module wishbone_interconnect
 #(
     parameter TAGSIZE,
     parameter N_SLAVE,
-    parameter N_MASTER,
-    parameter SSTART_ADDR[N_SLAVE],
-    parameter SEND_ADDR[N_SLAVE]
+    parameter N_MASTER
 )(
+/* verilator lint_off UNDRIVEN */
     input logic                     clk_i,
     input logic                     rst_i,
+    
+    // Slave addresse
+    input logic [N_SLAVE-1:0][31:0] SSTART_ADDR,
+    input logic [N_SLAVE-1:0][31:0] SEND_ADDR,
+    
     // FROM MASTER
     // Data & Address
-    input logic [31:0]              ms_dat_i[N_MASTER],  // master->interconnect data
-    input logic [TAGSIZE-1:0]       ms_tgd_i[N_MASTER],  // data in tag 
-    input logic                     ms_adr_i[N_MASTER],  // master->interconnect address
-    input logic [TAGSIZE-1:0]       ms_tga_i[N_MASTER],  // address tag
+    input logic [N_MASTER-1:0][31:0]              ms_dat_i,  // master->interconnect data
+    input logic [N_MASTER-1:0][TAGSIZE-1:0]       ms_tgd_i,  // data in tag 
+    input logic [N_MASTER-1:0][31:0]              ms_adr_i,  // master->interconnect address
+    input logic [N_MASTER-1:0][TAGSIZE-1:0]       ms_tga_i,  // address tag
     // Sync
-    input logic                     ms_ack_i[N_MASTER],  // acknowledge from master
-    input logic                     ms_cyc_i[N_MASTER],  // transaction cycle in progress
-    input logic [TAGSIZE-1:0]       ms_tgc_i[N_MASTER],  // transaction cycle tag
-    input logic [3:0]               ms_sel_i[N_MASTER],  // select where the data on the data bus (8-bit granularity assumed)
-    input logic                     ms_stb_i[N_MASTER],  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
-    input logic                     ms_we_i[N_MASTER],   // write enable
-    input logic                     mi_lock_i[N_MASTER], // lock the interconnect
+    input logic [N_MASTER-1:0]                    ms_ack_i,  // acknowledge from master
+    input logic [N_MASTER-1:0]                    ms_cyc_i,  // transaction cycle in progress
+    input logic [N_MASTER-1:0][TAGSIZE-1:0]       ms_tgc_i,  // transaction cycle tag
+    input logic [N_MASTER-1:0][3:0]               ms_sel_i,  // select where the data on the data bus (8-bit granularity assumed)
+    input logic [N_MASTER-1:0]                    ms_stb_i,  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
+    input logic [N_MASTER-1:0]                     ms_we_i,   // write enable
+    input logic [N_MASTER-1:0]                     mi_lock_i, // lock the interconnect
 
     // TO MASTER
     // Data
@@ -55,16 +59,16 @@ module wishbone_interconnect
     output logic                    sm_err_o,  // slave encountered error
     output logic                    sm_rty_o,  // retry request from slave
     // Sync between mutliple masters (is this still in the spec? Somehow yes and no...)
-    output logic                    im_gnt_o[N_MASTER], // Grant master the bus
+    output logic [N_MASTER-1:0]     im_gnt_o, // Grant master the bus
 
     // FROM SLAVE
     // Data
-    input logic [31:0]              sm_dat_i[N_SLAVE],  // Data from slave
-    input logic [TAGSIZE-1:0]       sm_tgd_i[N_SLAVE],  // data tag
+    input logic [N_SLAVE-1:0][31:0]              sm_dat_i,  // Data from slave
+    input logic [N_SLAVE-1:0][TAGSIZE-1:0]       sm_tgd_i,  // data tag
     // Sync
-    input logic                     sm_ack_i[N_SLAVE],  // slave ack
-    input logic                     sm_err_i[N_SLAVE],  // slave encountered error
-    input logic                     sm_rty_i[N_SLAVE],  // retry request from slave
+    input logic [N_SLAVE-1:0]                     sm_ack_i,  // slave ack
+    input logic [N_SLAVE-1:0]                     sm_err_i,  // slave encountered error
+    input logic [N_SLAVE-1:0]                     sm_rty_i,  // retry request from slave
 
     // TO SLAVE
     // Data & Address
@@ -84,6 +88,9 @@ module wishbone_interconnect
 logic [N_MASTER-1:0] master_arbiter_n;
 logic [N_MASTER-1:0] master_arbiter_q;
 logic [N_SLAVE-1:0]  slave_arbiter;
+logic [31:0]         ms_adr;
+
+assign ms_adr_o = ms_adr;
 
 // Master arbiter select block
 // sets master_arbiter to one-hot or 0
@@ -94,7 +101,7 @@ begin
         master_arbiter_n = 'b0;
         // Give the bus to the highest priority (LSB) master
         for(int i = N_MASTER; i >= 0; i = i - 1)
-            if(ms_cyc_i[i]) master_arbiter_n = 'b0 & (1 << i);
+            if(ms_cyc_i[i]) master_arbiter_n = 'b0 | (1 << i);
     end
 end
 
@@ -103,7 +110,7 @@ always_comb
 begin
     im_gnt_o = 'b0;
     ms_dat_o = '0;
-    ms_adr_o = '0;
+    ms_adr   = '0;
     ms_tgd_o = '0;
     ms_tga_o = '0;
     ms_ack_o = '0;
@@ -117,16 +124,16 @@ begin
             // Give the master the bus
             im_gnt_o[i] = 1'b1;
             // mux the data from master to slave
-            ms_dat_o = ms_dat_i[masters];
-            ms_adr_o = ms_adr_i[masters];
-            ms_tgd_o = ms_tgd_i[masters];
-            ms_tga_o = ms_tga_i[masters];
-            ms_ack_o = ms_ack_i[masters];
-            ms_cyc_o = ms_cyc_i[masters];
-            ms_tgc_o = ms_tgc_i[masters];
-            ms_sel_o = ms_sel_i[masters];
-            ms_stb_o = ms_stb_i[masters];
-            ms_we_o  = ms_we_i[masters];
+            ms_dat_o = ms_dat_i[i];
+            ms_adr   = ms_adr_i[i];
+            ms_tgd_o = ms_tgd_i[i];
+            ms_tga_o = ms_tga_i[i];
+            ms_ack_o = ms_ack_i[i];
+            ms_cyc_o = ms_cyc_i[i];
+            ms_tgc_o = ms_tgc_i[i];
+            ms_sel_o = ms_sel_i[i];
+            ms_stb_o = ms_stb_i[i];
+            ms_we_o  =  ms_we_i[i];
         end
     end
 end
@@ -138,8 +145,8 @@ always_comb
 begin
     slave_arbiter = 'b0;
     for(int i = 0; i < N_SLAVE; i = i + 1) begin
-        if(ms_adr_o > SSTART_ADDR[i] && ms_adr_o < SEND_ADDR)
-            slave_arbiter = 'b0 & (1 << i);
+        if((ms_adr > SSTART_ADDR[i]) && (ms_adr < SEND_ADDR[i]))
+            slave_arbiter = 'b0 | (1 << i);
     end
 end
 
