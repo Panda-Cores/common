@@ -49,7 +49,7 @@ default: run
 
 run:
 	@echo "-- VERILATE ----------------"
-	$(VERILATOR) $(VERILATOR_FLAGS) $(INCLUDE) wishbone_tb.sv sim_main.cpp
+	$(VERILATOR) $(VERILATOR_FLAGS) wishbone_tb.sv $(INCLUDE) sim_main.cpp
 
 	@echo
 	@echo "-- COMPILE -----------------"
