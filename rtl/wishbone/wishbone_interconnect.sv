@@ -92,8 +92,6 @@ logic [31:0]         ms_adr;
 logic                ms_cyc;
 logic                ms_stb;
 
-assign ms_adr_o = ms_adr;
-
 // Master arbiter select block
 // sets master_arbiter to one-hot or 0
 always_comb
@@ -145,10 +143,14 @@ end
 // TODO: Error if no slave is found
 always_comb
 begin
+    ms_adr_o = 'b0;
     slave_arbiter = 'b0;
     for(int i = 0; i < N_SLAVE; i = i + 1) begin
-        if((ms_adr >= SSTART_ADDR[i]) && (ms_adr <= SEND_ADDR[i]))
+        if((ms_adr >= SSTART_ADDR[i]) && (ms_adr <= SEND_ADDR[i])) begin
             slave_arbiter = 'b0 | (1 << i);
+            // Address out is set off by startaddress of the selected slave
+            ms_adr_o = ms_adr - SSTART_ADDR[i];
+        end
     end
 end
 

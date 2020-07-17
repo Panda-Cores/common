@@ -81,40 +81,40 @@ int main(int argc, char** argv, char** env) {
     top->rstn_i = 1;
 
     // Run tests
-    write_test(0x0, 0xababcdcd);
-    write_test(0x4, 0xababcdcd);
-    write_test(0x8, 0xababcdcd);
-    write_test(0xc, 0xababcdcd);
-    write_test(0x10, 0xababcdcd);
-    write_test(0x14, 0xababcdcd);
-    if(result = read_test(0x0, 0xababcdcd) != 0)
+    write_test(0x0, 0xababcdc1);
+    write_test(0x4, 0xababcdc2);
+    write_test(0x8, 0xababcdc3);
+    write_test(0xc, 0xababcdc4);
+    write_test(0x10, 0xababcdc5);
+    write_test(0x14, 0xababcdc6);
+    if(result = read_test(0x0, 0xababcdc1) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
 
-    if(result = read_test(0x4, 0xababcdcd) != 0)
+    if(result = read_test(0x4, 0xababcdc2) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
 
-    if(result = read_test(0x8, 0xababcdcd) != 0)
+    if(result = read_test(0x8, 0xababcdc3) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
 
-    if(result = read_test(0xc, 0xababcdcd) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-    
-
-    if(result = read_test(0x10, 0xababcdcd) != 0)
+    if(result = read_test(0xc, 0xababcdc4) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
     
 
-    if(result = read_test(0x14, 0xababcdcd) != 0)
+    if(result = read_test(0x10, 0xababcdc5) != 0)
+        std::cout << "FAILED " << result << std::endl;
+    else
+        std::cout << "PASSED " << result << std::endl;
+    
+
+    if(result = read_test(0x14, 0xababcdc6) != 0)
         std::cout << "FAILED " << result << std::endl;
     else
         std::cout << "PASSED " << result << std::endl;
