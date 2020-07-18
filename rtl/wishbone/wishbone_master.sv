@@ -3,7 +3,7 @@
 // functionality of this code is given.
 // Use this code under your own risk.
 // When using this code, copy this disclaimer at the top of 
-// Your file
+// your file
 //
 // (c) Luca Hanel 2020
 //
@@ -17,6 +17,8 @@
 //
 // TODO: enable the possibility of block read&writes. This makes
 //       way for caches
+//       Possibly make use of tags
+//       Rework the interface to accept commands
 //
 // ------------------------------------------------------------
 
@@ -52,7 +54,7 @@ module wishbone_master #(
     output logic                    wb_stb_o,  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
     output logic                    wb_we_o,   // write enable
     // Sync between mutliple masters (is this still in the spec? Somehow yes and no...)
-    input logic                     wb_gnt_i
+    input logic                     wb_gnt_i   // Bus granted by interconnect
 );
 
 enum logic [1:0] {IDLE, WRITE, READ} CS, NS;

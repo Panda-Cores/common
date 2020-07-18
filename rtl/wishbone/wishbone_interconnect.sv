@@ -17,7 +17,12 @@
 //                mi: master->interconnect signals
 //                im: interconnect->master signals
 //
-// TODO: everything
+// Tests: Single master, single slave                       SUCCESS
+//        Single master, multi slave                        SUCCESS
+//        Multi master, multi slave, non-simultaneous       SUCCESS
+//        Multi master, multi slave, simultaneous           SUCCESS
+//
+// TODO: Test simultaneous master accesses
 //
 // ------------------------------------------------------------
 

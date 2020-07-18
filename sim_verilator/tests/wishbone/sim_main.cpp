@@ -5,67 +5,120 @@
 # include <verilated_vcd_c.h>
 #endif
 
+typedef unsigned __int128 uint128_t;
+
 static int t_cnt = 0;
 static Vwishbone_tb* top = new Vwishbone_tb;
 VerilatedVcdC* tfp = new VerilatedVcdC;
 
-int write_test(int master, int addr, int data){
-    int count = 0;
-    t_cnt++;
+void tick(){
+    top->clk = 0;
     top->eval();
     tfp->dump(t_cnt);
-    top->clk = !top->clk;
-    t_cnt++;
-    top->eval();
-    tfp->dump(t_cnt);
-    top->clk = !top->clk;
 
-    top->mdata_i = (uint64_t) data << (master * 32);
-    top->mvalid_i = 1 << master;
-    top->mwe_i = 0b1111 << (master * 4);
-    top->maddr_i = (uint64_t) addr << (master * 32);
-    while((top->mvalid_o & (1 << master)) == 0 && count < 10){
-        t_cnt++;
-        top->eval();
-        tfp->dump(t_cnt);
-        top->clk = !top->clk;
-        count++;
-    }
-    top->mvalid_i = 0;
-    return 0;
+    top->clk = 1;
+    t_cnt++;
+    top->eval();
+    tfp->dump(t_cnt);
+
+    top->clk = 0;
+    t_cnt++;
+    top->eval();
 }
 
-int read_test(int master, int addr, int expected_data){
-    t_cnt++;
-    top->eval();
-    tfp->dump(t_cnt);
-    top->clk = !top->clk;
-    t_cnt++;
-    top->eval();
-    tfp->dump(t_cnt);
-    top->clk = !top->clk;
+void write_nowait(int master, int addr, int data){
+    top->mdata_i = top->mdata_i & ( ~( (uint128_t) 0xffffffff << (32*master)));
+    top->mdata_i = top->mdata_i | (uint128_t) data << (32*master);
+    top->maddr_i = top->maddr_i & (~((uint128_t) 0xffffffff << (32*master)));
+    top->maddr_i = top->maddr_i | (uint128_t) addr << (32*master);
+    top->mwe_i = top->mwe_i | (0b1111 << (4 * master));
+    top->mvalid_i = top->mvalid_i | (1 << master);
+}
 
-    int count = 0;
-    top->mdata_i = (uint64_t) 0 << (master * 32);
-    top->mwe_i = 0b0 << (master * 4);
-    top->mvalid_i = (1 << master);
-    top->maddr_i = (uint64_t) addr << (master * 32);
-    while((top->mvalid_o & (1 << master)) == 0 && count < 10){
-        t_cnt++;
-        top->eval();
-        tfp->dump(t_cnt);
-        top->clk = !top->clk;
-        count++;
+void write(int master, int addr, int data){
+    write_nowait(master, addr, data);
+    tick();
+    while((top->mvalid_o & (1 << master)) == 0){
+        tick();
     }
     top->mvalid_i = 0;
-    if((uint32_t) (top->mdata_o  >> (32*master)) != expected_data)
+    tick();
+}
+
+int read_nowait(int master, int addr){
+    top->mdata_i = top->mdata_i & (~((uint128_t) 0xffffffff << (32*master)));
+    top->maddr_i = top->maddr_i & (~((uint128_t) 0xffffffff << (32*master)));
+    top->maddr_i = top->maddr_i | (uint128_t) addr << (32*master);
+    top->mwe_i = top->mwe_i & (~(0b1111 << (4 * master)));
+    top->mvalid_i = top->mvalid_i | (1 << master);
+}
+
+int read(int master, int addr){
+    read_nowait(master, addr);
+    tick();
+    while((top->mvalid_o & (1 << master) == 0)){
+        tick();
+    }
+    top->mvalid_i = 0;
+    tick();
+    return (uint32_t) (top->mdata_o >> (32 * master));
+}
+
+uint128_t simultaneous_read(int master0, int master1, int addr0, int addr1){
+    read_nowait(master0, addr0);
+    read_nowait(master1, addr1);
+    int valid = top->mvalid_o;
+    while((valid & (1 << master0) == 0) || (valid & (1 << master1)) == 0){
+        tick();
+        valid |= top->mvalid_o;
+        top->mvalid_i = ~valid;
+    }
+    tick();
+    return (uint128_t) top->mdata_o;
+}
+
+int simultaneous_write(int master0, int master1, int addr0, int addr1, int data0, int data1){
+    write_nowait(master0, addr0, data0);
+    write_nowait(master1, addr1, data1);
+    int valid = top->mvalid_o;
+    while((valid & (1 << master0) == 0) || (valid & (1 << master1)) == 0){
+        tick();
+        valid |= top->mvalid_o;
+        top->mvalid_i = ~valid;
+    }
+    tick();
+    if(read(master1, addr0) != data0)
         return 1;
+        
+    if(read(master0, addr1) != data1)
+        return 2;
     return 0;
 }
 
+int test_wishbone(){
+    uint128_t data;
+    // Write with one master, read with the other and the other way around
+    for(int i = 0; i < 0x1a; i+=4){
+        write(0, i, (0xababcd00 + i));
+        if(read(1, i) != (0xababcd00 + i))
+            return i+1;
+        write(1, i, 0xcdcdab00 + i );
+        if(read(0, i) != 0xcdcdab00 + i)
+            return i+2;
+    }
+    // Write request on both masters at the same time, read crossed
+    if(simultaneous_write(0, 1, 0x8, 0xc, 0xababcdcd, 0xdedefafa) != 0)
+        return 1<<6;
+
+    // Read request on both masters at the same time
+    if(simultaneous_read(1, 0, 0x8, 0xc) != (uint128_t) 0xababcdcddedefafa)
+        return 1<<7;
+    
+    return 0;
+}
 int main(int argc, char** argv, char** env) {
     Verilated::commandArgs(argc, argv);
-    int result;
+    int result = 0;
     
     Verilated::traceEverOn(true);
     top->trace(tfp, 99);  // Trace 99 levels of hierarchy
@@ -75,100 +128,29 @@ int main(int argc, char** argv, char** env) {
     // Reset the core
     top->clk = 0;
     top->rstn_i = 0;
-    for(int i = 0; i < 5; i++){
-        t_cnt++;
-        top->eval();
-        tfp->dump(t_cnt);
-        top->clk = !top->clk;
+    top->mvalid_i = 0;
+    top->maddr_i = 0;
+    top->mdata_i = 0;
+    top->mwe_i = 0;
+    for(int i = 0; i < 4; i++){
+        tick();
     }
     top->rstn_i = 1;
 
     // Run tests
-    write_test(0, 0x0, 0xababcdc1);
-    write_test(0, 0x4, 0xababcdc2);
-    write_test(0, 0x8, 0xababcdc3);
-    write_test(0, 0xc, 0xababcdc4);
-    write_test(0, 0x10, 0xababcdc5);
-    write_test(0, 0x14, 0xababcdc6);
-    if(result = read_test(0, 0x0, 0xababcdc1) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
+    // result = simultaneous_write(0, 1, 0x8, 0x14, 0xdeadbeef, 0xbeefdead);
 
-    if(result = read_test(0, 0x4, 0xababcdc2) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-
-    if(result = read_test(0, 0x8, 0xababcdc3) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-
-    if(result = read_test(0, 0xc, 0xababcdc4) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-    
-
-    if(result = read_test(0, 0x10, 0xababcdc5) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-    
-    if(result = read_test(0, 0x14, 0xababcdc6) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-
-
-    write_test(1, 0x0, 0xababcd11);
-    write_test(1, 0x4, 0xababcd12);
-    write_test(1, 0x8, 0xababcd13);
-    write_test(1, 0xc, 0xababcd14);
-    write_test(1, 0x10, 0xababcd15);
-    write_test(1, 0x14, 0xababcd16);
-    if(result = read_test(1, 0x0, 0xababcd11) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-
-    if(result = read_test(1, 0x4, 0xababcd12) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-
-    if(result = read_test(1, 0x8, 0xababcd13) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-
-    if(result = read_test(1, 0xc, 0xababcd14) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;    
-
-    if(result = read_test(1, 0x10, 0xababcd15) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-    
-
-    if(result = read_test(1, 0x14, 0xababcd16) != 0)
-        std::cout << "FAILED " << result << std::endl;
-    else
-        std::cout << "PASSED " << result << std::endl;
-    
-
-    for(int i = 0; i < 4; i++){
-        t_cnt++;
-        top->eval();
-        tfp->dump(t_cnt);
-        top->clk = !top->clk;
-    }
+    result = test_wishbone();
 
     // Final model cleanup
+    tick();
     top->final();
+
+    if(result == 0)
+        std::cout << "PASSED" << std::endl;
+    else
+        std::cout << "FAILED " << result << std::endl;
+    
 
     // Close trace if opened
     if (tfp) { tfp->close(); tfp = NULL; }
