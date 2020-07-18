@@ -45,7 +45,7 @@ void write(int master, int addr, int data){
     tick();
 }
 
-int read_nowait(int master, int addr){
+void read_nowait(int master, int addr){
     top->mdata_i = top->mdata_i & (~((uint128_t) 0xffffffff << (32*master)));
     top->maddr_i = top->maddr_i & (~((uint128_t) 0xffffffff << (32*master)));
     top->maddr_i = top->maddr_i | (uint128_t) addr << (32*master);
@@ -75,6 +75,19 @@ uint128_t simultaneous_read(int master0, int master1, int addr0, int addr1){
     }
     tick();
     return (uint128_t) top->mdata_o;
+}
+
+int simultaneous_read_write(int wmaster, int rmaster, int waddr, int raddr, int wdata){
+    write_nowait(wmaster, waddr, wdata);
+    read_nowait(rmaster, raddr);
+    int valid = top->mvalid_o;
+    while((valid & (1 << wmaster) == 0) || (valid & (1 << rmaster)) == 0){
+        tick();
+        valid |= top->mvalid_o;
+        top->mvalid_i = ~valid;
+    }
+    tick();
+    return (uint32_t) (top->mdata_o >> (32 * rmaster));
 }
 
 int simultaneous_write(int master0, int master1, int addr0, int addr1, int data0, int data1){
@@ -113,6 +126,17 @@ int test_wishbone(){
     // Read request on both masters at the same time
     if(simultaneous_read(1, 0, 0x8, 0xc) != (uint128_t) 0xababcdcddedefafa)
         return 1<<7;
+
+    if(simultaneous_read_write(0, 1, 0x10, 0x10, 0x0000ffff) != 0x0000ffff)
+        return 1000;
+
+    tick(); // TODO: This additional tick is currently required in order for the
+            //       low prio master (1) to free the bus and let the interconnect
+            //       decide who to access next. Otherwise, in the next simultaneous
+            //       request, the low prio master remains in ownership of the bus
+            
+    if(simultaneous_read_write(1, 0, 0x10, 0x10, 0xffff0000) != 0x0000ffff)
+        return 1001;
     
     return 0;
 }

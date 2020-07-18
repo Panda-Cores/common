@@ -14,7 +14,7 @@
 // Functionality: My try at a wishbone slave with a simple
 //                interface. Does support burst read & write
 //
-//                The connected slave needs to be able to
+//                As of now, the connected slave needs to be able to
 //                perform read&write requests instantanious
 //
 // ------------------------------------------------------------
@@ -24,13 +24,14 @@ module wishbone_slave #(
 )(
 /* verilator lint_off UNDRIVEN */
     input logic                     clk_i,
-    input logic                     rst_i,
-    input logic [31:0]              data_i,
-    output logic [31:0]             data_o,
-    output logic [31:0]             addr_o,
-    output logic                    we_o,
-    output logic [3:0]              sel_o,
-    input logic                     valid_i,
+    input logic                     rst_i,    // active high, as per spec
+    // Slave connections
+    input logic [31:0]              data_i,   // data from slave
+    output logic [31:0]             data_o,   // data to slave
+    output logic [31:0]             addr_o,   // addr to slave
+    output logic                    we_o,     // write enable to slave
+    output logic [3:0]              sel_o,    // where the data lies, to slave
+    input logic                     valid_i,  // slave ack (for later usage, may be extended such that slave can take multiple cycles to respond)
     // Wishbone specifics
     // Data
     input logic [31:0]              wb_dat_i,  // data in

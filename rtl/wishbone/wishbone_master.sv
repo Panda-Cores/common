@@ -115,7 +115,7 @@ begin
                 wb_sel_o = we_i;
                 // Assert address
                 wb_adr_o = addr_i;
-                data_o  = wb_dat_i;
+                data_o   = wb_dat_i;
                 // When slave acknowledge the read, return to idle and validate read request
                 if(wb_ack_i) begin
                     NS      = IDLE;
