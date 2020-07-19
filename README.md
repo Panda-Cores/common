@@ -9,10 +9,13 @@ Features so far:
 * Most 32bit RISC-V instructions (some instructions are missing, such as fence & fence_i)
 * Simple programs can run
 * Core can be halted (but no debug module yet)
-* Multimaster/multislave Wishbone bus (doesn't support block operations yet)
+* Own implementation of the wishbone bus
+    * Multi master / multi slave
+    * Block actions possible
+    * Pipelined actions possible (slaves need to be able to perform actions within one cycle)
+    * To be fixed: priority issue: Master that has claimed the bus cannot be interrupted by higher priority master
 
 Upcoming features (in order of priority):
-* Block read Wishbone, additional commands to improve latency for IF stage
 * Crude Instruction cache
 * Extensive testing
 * Exception raising on illegal instruction
