@@ -35,28 +35,44 @@ module wishbone_master #(
     input logic [3:0]               we_i,
     input logic                     valid_i,
     output logic                    valid_o,
-    // Wishbone specifics
-    // Data
-    input logic [31:0]              wb_dat_i,  // data in
-    input logic [TAGSIZE-1:0]       wb_tgd_i,  // data in tag 
-    output logic [31:0]             wb_dat_o,  // data out
-    output logic [TAGSIZE-1:0]      wb_tgd_o,  // data out tag
-    // Address
-    output logic [31:0]             wb_adr_o,  // address out
-    output logic [TAGSIZE-1:0]      wb_tga_o,  // address tag
-    // Sync
-    input logic                     wb_ack_i,  // acknowledge from slave
-    output logic                    wb_cyc_o,  // transaction cycle in progress
-    output logic [TAGSIZE-1:0]      wb_tgc_o,  // transaction cycle tag
-    input logic                     wb_err_i,  // slave encountered error
-    output logic                    wb_lock_o, // lock the interconnect
-    input logic                     wb_rty_i,  // retry request from slave
-    output logic [3:0]              wb_sel_o,  // select where the data on the data bus (8-bit granularity assumed)
-    output logic                    wb_stb_o,  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
-    output logic                    wb_we_o,   // write enable
-    // Sync between mutliple masters (is this still in the spec? Somehow yes and no...)
-    input logic                     wb_gnt_i   // Bus granted by interconnect
+    wb_master_bus_t                 wb_bus
 );
+
+
+logic [31:0]        wb_dat_i;  // data in
+logic [TAGSIZE-1:0] wb_tgd_i;  // data in tag 
+logic [31:0]        wb_dat_o;  // data out
+logic [TAGSIZE-1:0] wb_tgd_o;  // data out tag
+logic [31:0]        wb_adr_o;  // address out
+logic [TAGSIZE-1:0] wb_tga_o;  // address tag
+logic               wb_ack_i;  // acknowledge from slave
+logic               wb_cyc_o;  // transaction cycle in progress
+logic [TAGSIZE-1:0] wb_tgc_o;  // transaction cycle tag
+logic               wb_err_i;  // slave encountered error
+logic               wb_lock_o; // lock the interconnect
+logic               wb_rty_i;  // retry request from slave
+logic [3:0]         wb_sel_o;  // select where the data on the data bus (8-bit granularity assumed)
+logic               wb_stb_o;  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
+logic               wb_we_o;   // write enable
+logic               wb_gnt_i;  // Bus granted by interconnect
+
+// local variables to wishbone bus (just dont want to rewrite everything ':D)
+assign wb_dat_i     = wb_bus.wb_dat_i;
+assign wb_tgd_i     = wb_bus.wb_tgd_i;
+assign wb_ack_i     = wb_bus.wb_ack_i;
+assign wb_err_i     = wb_bus.wb_err_i;
+assign wb_rty_i     = wb_bus.wb_rty_i;
+assign wb_gnt_i     = wb_bus.wb_gnt_i;
+assign wb_bus.wb_sel_o     = wb_sel_o;
+assign wb_bus.wb_stb_o     = wb_stb_o;
+assign wb_bus.wb_we_o      = wb_we_o;
+assign wb_bus.wb_lock_o    = wb_lock_o;
+assign wb_bus.wb_cyc_o     = wb_cyc_o;
+assign wb_bus.wb_tgc_o     = wb_tgc_o;
+assign wb_bus.wb_dat_o     = wb_dat_o;
+assign wb_bus.wb_tgd_o     = wb_tgd_o;
+assign wb_bus.wb_adr_o     = wb_adr_o;
+assign wb_bus.wb_tga_o     = wb_tga_o;
 
 enum logic [1:0] {IDLE, WRITE, READ} CS, NS;
 

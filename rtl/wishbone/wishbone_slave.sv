@@ -32,26 +32,39 @@ module wishbone_slave #(
     output logic                    we_o,     // write enable to slave
     output logic [3:0]              sel_o,    // where the data lies, to slave
     input logic                     valid_i,  // slave ack (for later usage, may be extended such that slave can take multiple cycles to respond)
-    // Wishbone specifics
-    // Data
-    input logic [31:0]              wb_dat_i,  // data in
-    input logic [TAGSIZE-1:0]       wb_tgd_i,  // data in tag 
-    output logic [31:0]             wb_dat_o,  // data out
-    output logic [TAGSIZE-1:0]      wb_tgd_o,  // data out tag
-    // Address
-    input logic [31:0]              wb_adr_i,  // address out
-    input logic [TAGSIZE-1:0]       wb_tga_i,  // address tag
-    // Sync
-    output logic                    wb_ack_o,  // acknowledge to master
-    input logic                     wb_cyc_i,  // transaction cycle in progress
-    input logic [TAGSIZE-1:0]       wb_tgc_i,  // transaction cycle tag
-    output logic                    wb_err_o,  // slave encountered error
-    output logic                    wb_rty_o,  // retry request from slave
-    input logic [3:0]               wb_sel_i,  // select where the data on the data bus (8-bit granularity assumed)
-    input logic                     wb_stb_i,  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
-    input logic                     wb_we_i   // write enable
+    wb_slave_bus_t                  wb_bus
 );
 
+logic [31:0]        wb_dat_i;  // data in
+logic [TAGSIZE-1:0] wb_tgd_i;  // data in tag 
+logic [31:0]        wb_dat_o;  // data out
+logic [TAGSIZE-1:0] wb_tgd_o;  // data out tag
+logic [31:0]        wb_adr_i;  // address out
+logic [TAGSIZE-1:0] wb_tga_i;  // address tag
+logic               wb_ack_o;  // acknowledge to master
+logic               wb_cyc_i;  // transaction cycle in progress
+logic [TAGSIZE-1:0] wb_tgc_i;  // transaction cycle tag
+logic               wb_err_o;  // slave encountered error
+logic               wb_rty_o;  // retry request from slave
+logic [3:0]         wb_sel_i;  // select where the data on the data bus (8-bit granularity assumed)
+logic               wb_stb_i;  // strobe out, valid data transfer. Slave responds with ack, err or retry to assertion
+logic               wb_we_i;   // write enable
+
+// local variables to wishbone bus (just dont want to rewrite everything ':D)
+assign wb_dat_i = wb_bus.wb_dat_i;
+assign wb_tgd_i = wb_bus.wb_tgd_i;
+assign wb_adr_i = wb_bus.wb_adr_i;
+assign wb_tga_i = wb_bus.wb_tga_i;
+assign wb_cyc_i = wb_bus.wb_cyc_i;
+assign wb_tgc_i = wb_bus.wb_tgc_i;
+assign wb_sel_i = wb_bus.wb_sel_i;
+assign wb_stb_i = wb_bus.wb_stb_i;
+assign wb_we_i  = wb_bus.wb_we_i;
+assign wb_bus.wb_dat_o = wb_dat_o;
+assign wb_bus.wb_tgd_o = wb_tgd_o;
+assign wb_bus.wb_ack_o = wb_ack_o;
+assign wb_bus.wb_err_o = wb_err_o;
+assign wb_bus.wb_rty_o = wb_rty_o;
 
 always_comb
 begin

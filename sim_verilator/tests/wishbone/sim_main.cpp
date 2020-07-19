@@ -67,14 +67,10 @@ int read(int master, int addr){
 uint128_t simultaneous_read(int master0, int master1, int addr0, int addr1){
     read_nowait(master0, addr0);
     read_nowait(master1, addr1);
-    std::cout << "v_i " << (int) top->mvalid_i << std::endl;
     int valid = top->mvalid_o;
     while(((valid & (1 << master0)) == 0) || ((valid & (1 << master1)) == 0)){
         tick();
-        std::cout << "v_o " << valid << std::endl;
         valid |= top->mvalid_o;
-        std::cout << "v_i " << (int) top->mvalid_i << std::endl;
-        std::cout << "v_o " << valid << std::endl;
         top->mvalid_i = ~valid;
     }
     top->mvalid_i = 0;
