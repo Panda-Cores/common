@@ -67,12 +67,17 @@ int read(int master, int addr){
 uint128_t simultaneous_read(int master0, int master1, int addr0, int addr1){
     read_nowait(master0, addr0);
     read_nowait(master1, addr1);
+    std::cout << "v_i " << (int) top->mvalid_i << std::endl;
     int valid = top->mvalid_o;
-    while((valid & (1 << master0) == 0) || (valid & (1 << master1)) == 0){
+    while(((valid & (1 << master0)) == 0) || ((valid & (1 << master1)) == 0)){
         tick();
+        std::cout << "v_o " << valid << std::endl;
         valid |= top->mvalid_o;
+        std::cout << "v_i " << (int) top->mvalid_i << std::endl;
+        std::cout << "v_o " << valid << std::endl;
         top->mvalid_i = ~valid;
     }
+    top->mvalid_i = 0;
     tick();
     return (uint128_t) top->mdata_o;
 }
@@ -86,6 +91,7 @@ int simultaneous_read_write(int wmaster, int rmaster, int waddr, int raddr, int 
         valid |= top->mvalid_o;
         top->mvalid_i = ~valid;
     }
+    top->mvalid_i = 0;
     tick();
     return (uint32_t) (top->mdata_o >> (32 * rmaster));
 }
@@ -99,6 +105,7 @@ int simultaneous_write(int master0, int master1, int addr0, int addr1, int data0
         valid |= top->mvalid_o;
         top->mvalid_i = ~valid;
     }
+    top->mvalid_i = 0;
     tick();
     if(read(master1, addr0) != data0)
         return 1;
@@ -108,8 +115,38 @@ int simultaneous_write(int master0, int master1, int addr0, int addr1, int data0
     return 0;
 }
 
+void n_write(int master, int addr, int data[7], int n){
+    top->mnaccess_i = n;
+    for(int i = 0; i < n; i++){
+        write_nowait(master, addr, data[i]);
+        tick();
+        while(top->mvalid_o & (1 << master) == 0){
+            tick();
+        }
+    }
+    top->mvalid_i = 0;
+    top->mnaccess_i = 0;
+    tick();
+}
+
+int n_read(int master, int addr, int data[7], int n){
+    top->mnaccess_i = n;
+    for(int i = 0; i < n; i++){
+        read_nowait(master, addr);
+        tick();
+        while(top->mvalid_o & (1 << master) == 0){
+            tick();
+        }
+        if((uint32_t) (top->mdata_o >> (32 * master)) != data[i])
+            return i + 1;
+    }
+    top->mvalid_i = 0;
+    top->mnaccess_i = 0;
+    tick();
+    return 0;
+}
+
 int test_wishbone(){
-    uint128_t data;
     // Write with one master, read with the other and the other way around
     for(int i = 0; i < 0x1a; i+=4){
         write(0, i, (0xababcd00 + i));
@@ -122,11 +159,13 @@ int test_wishbone(){
     // Write request on both masters at the same time, read crossed
     if(simultaneous_write(0, 1, 0x8, 0xc, 0xababcdcd, 0xdedefafa) != 0)
         return 1<<6;
+    tick();
 
     // Read request on both masters at the same time
     if(simultaneous_read(1, 0, 0x8, 0xc) != (uint128_t) 0xababcdcddedefafa)
         return 1<<7;
 
+    tick();
     if(simultaneous_read_write(0, 1, 0x10, 0x10, 0x0000ffff) != 0x0000ffff)
         return 1000;
 
@@ -137,6 +176,11 @@ int test_wishbone(){
             
     if(simultaneous_read_write(1, 0, 0x10, 0x10, 0xffff0000) != 0x0000ffff)
         return 1001;
+
+    int data[4] = {0x1, 0x2, 0x3, 0x4};
+    n_write(0, 0x0, data, 4);
+    if(n_read(0, 0x0, data, 4) != 0)
+        return 1200;
     
     return 0;
 }
@@ -156,6 +200,7 @@ int main(int argc, char** argv, char** env) {
     top->maddr_i = 0;
     top->mdata_i = 0;
     top->mwe_i = 0;
+    top->mnaccess_i = 0;
     for(int i = 0; i < 4; i++){
         tick();
     }

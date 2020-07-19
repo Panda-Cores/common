@@ -22,6 +22,7 @@ module wishbone_tb
     input logic [1:0][31:0]  mdata_i,
     output logic [1:0][31:0] mdata_o,
     input logic [1:0][31:0]  maddr_i,
+    input logic [1:0][2:0]   mnaccess_i,
     input logic [1:0][3:0]   mwe_i,
     input logic [1:0]        mvalid_i,
     output logic [1:0]       mvalid_o
@@ -162,6 +163,7 @@ wishbone_master #(
     .data_i     ( mdata_i[0]  ),
     .data_o     ( mdata_o[0]  ),
     .addr_i     ( maddr_i[0]  ),
+    .n_access_i ( mnaccess_i[0]),
     .we_i       ( mwe_i[0]    ),
     .valid_i    ( mvalid_i[0] ),
     .valid_o    ( mvalid_o[0] ),
@@ -184,6 +186,7 @@ wishbone_master #(
     .data_i     ( mdata_i[1]  ),
     .data_o     ( mdata_o[1]  ),
     .addr_i     ( maddr_i[1]  ),
+    .n_access_i ( mnaccess_i[1]),
     .we_i       ( mwe_i[1]    ),
     .valid_i    ( mvalid_i[1] ),
     .valid_o    ( mvalid_o[1] ),

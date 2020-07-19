@@ -31,6 +31,7 @@ module wishbone_master #(
     input logic [31:0]              data_i,
     output logic [31:0]             data_o,
     input logic [31:0]              addr_i,
+    input logic [2:0]               n_access_i,
     input logic [3:0]               we_i,
     input logic                     valid_i,
     output logic                    valid_o,
@@ -59,11 +60,23 @@ module wishbone_master #(
 
 enum logic [1:0] {IDLE, WRITE, READ} CS, NS;
 
+logic [31:0] addr_n, addr_q;
+logic [31:0] data_n, data_q;
+logic [2:0]  counter_n, counter_q;
+logic        incr_counter;
+
 always_ff @(posedge clk_i, posedge rst_i) begin
     if(rst_i) begin
         CS <= IDLE;
     end else begin
         CS <= NS;
+        addr_q <= addr_n;
+        data_q <= data_n;
+        counter_q <= counter_n;
+        if(incr_counter) begin
+            addr_q <= addr_n + 4;
+            counter_q <= counter_n + 1;
+        end
     end
 end
 
@@ -72,18 +85,25 @@ begin
     wb_cyc_o = 1'b0;
     wb_we_o  = 1'b0;
     wb_dat_o = 'b0;
-    wb_adr_o = 'b0;
     valid_o  = 1'b0;
-    wb_adr_o = addr_i;
+
+    incr_counter = 1'b0;
+    addr_n = addr_q;
+    wb_adr_o = addr_q;
+    data_n = data_i;
 
     case(CS)
         IDLE: begin
             // Wait for a requested transaction
             if(valid_i) begin
-                wb_cyc_o = 1'b1;    // assert that we want to perform a transaction
-                if(we_i != 'b0)     // and jump into respective state
+                wb_adr_o = addr_i;
+                addr_n   = addr_i;
+                counter_n= 'b1;
+                wb_cyc_o = 1'b1;        // assert that we want to perform a transaction
+                if(we_i != 'b0) begin   // and jump into respective state
+                    wb_dat_o = data_i;
                     NS = WRITE;
-                else
+                end else
                     NS = READ;
             end
         end
@@ -96,11 +116,15 @@ begin
                 wb_we_o  = 1'b1;
                 // Same granularity as write request
                 wb_sel_o = we_i;
-                // Assert address and data
-                wb_dat_o = data_i;
+                // Assert data
+                wb_dat_o = data_q;
                 // When slave acknowledges the write, we return to idle and validate the write request
                 if(wb_ack_i) begin
-                    NS      = IDLE;
+                    if(counter_q < n_access_i) begin
+                        NS = WRITE;
+                        incr_counter = 1'b1;
+                    end else
+                        NS = IDLE;
                     valid_o = 1'b1;
                 end
             end
@@ -113,12 +137,14 @@ begin
                 wb_stb_o = 1'b1;
                 // Same granularity as read request
                 wb_sel_o = we_i;
-                // Assert address
-                wb_adr_o = addr_i;
                 data_o   = wb_dat_i;
                 // When slave acknowledge the read, return to idle and validate read request
                 if(wb_ack_i) begin
-                    NS      = IDLE;
+                    if(counter_q < n_access_i) begin
+                        NS = READ;
+                        incr_counter = 1'b1;
+                    end else
+                        NS = IDLE;
                     valid_o = 1'b1;
                 end
             end
