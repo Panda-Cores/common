@@ -41,24 +41,24 @@ VERILATOR_FLAGS += --coverage
 #VERILATOR_FLAGS += --gdbbt
 
 
-PRJDIR = /home/luca/RVMicroController
-INCLUDE := $(shell cat sources.txt)
+PRJDIR = /home/luca/projects/RVMicroController
+INCLUDE := $(shell cat $(PRJDIR)/sim_verilator/common/sources.txt)
 
 ######################################################################
 default: run
 
 run:
 	@echo "-- VERILATE ----------------"
-	$(VERILATOR) $(VERILATOR_FLAGS) $(INCLUDE) sim_main.cpp
+	$(VERILATOR) $(VERILATOR_FLAGS) $(INCLUDE) sim_main.cpp wishbone_tb.sv --top-module wishbone_tb
 
 	@echo
 	@echo "-- COMPILE -----------------"
-	$(MAKE) -j 4 -C obj_dir -f Vcore_top.mk
+	$(MAKE) -j 4 -C obj_dir -f Vwishbone_tb.mk
 
 	@echo
 	@echo "-- RUN ---------------------"
 	@mkdir -p logs
-	obj_dir/Vcore_top +trace
+	obj_dir/Vwishbone_tb +trace
 
 	@echo
 	@echo "-- COVERAGE ----------------"

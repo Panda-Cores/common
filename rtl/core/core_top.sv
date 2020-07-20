@@ -19,36 +19,29 @@
 //
 // ------------------------------------------------------------
 
-
+/* verilator lint_off PINMISSING */
 module core_top (
     input logic          clk,
     input logic          rstn_i,
     output logic         rst_reqn_o,
     input logic          halt_core_i,
-// IF-Memory
-    output logic [31:0]  IF_addr_o,
-    output logic         IF_en_o,
-    input logic  [31:0]  IF_data_i,
-    output logic [31:0]  IF_data_o,
-    output logic [3:0]   IF_write_o,
-// MEM-Memory
-    output logic [31:0]  MEM_addr_o,
-    output logic         MEM_en_o,
-    input logic  [31:0]  MEM_data_i,
-    output logic [31:0]  MEM_data_o,
-    output logic [3:0]   MEM_write_o
+    wb_master_bus_t      wb_masters[2]
 );
 
 
 assign rst_reqn_o = rstn_i;
-assign IF_data_o = 'b0;
-assign IF_write_o = 'b0;
 
 //IF-ID
 logic                ID_IF_ack;
 logic                IF_ID_valid;
 logic [31:0]         IF_ID_instr;
 logic [31:0]         IF_ID_pc;
+
+// IF-mem
+logic                IF_memv_i;
+logic [31:0]         IF_addr_o;
+logic [31:0]         IF_data_i;
+logic                IF_en_o;
 
 //EX-IF (branch)
 logic                branch;
@@ -77,6 +70,14 @@ logic [31:0]         EX_MEM_instr;
 logic [31:0]         EX_MEM_result;
 logic [31:0]         EX_MEM_rs2;
 logic [31:0]         EX_MEM_pc;
+
+//MEM-mem
+logic [31:0]         MEM_addr_o;
+logic [31:0]         MEM_data_o;
+logic [31:0]         MEM_data_i;
+logic [3:0]          MEM_write_o;
+logic                MEM_en_o;
+logic                MEM_memv_i;
 
 //MEM-WB
 logic                MEM_WB_valid;
@@ -114,12 +115,26 @@ IF_stage IF_i (
     .instr_o     ( IF_ID_instr   ),
     .pc_o        ( IF_ID_pc      ),
     //TODO: Cache
-    .MEM_en_o    ( IF_en_o      ),
-    .MEM_addr_o  ( IF_addr_o     ),
-    .MEM_data_i  ( IF_data_i     ),
+    .mem_en_o    ( IF_en_o       ),
+    .mem_addr_o  ( IF_addr_o     ),
+    .mem_data_i  ( IF_data_i     ),
+    .mem_valid_i ( IF_memv_i     ),
     //Branching
     .branch_i    ( branch        ),
     .pc_i        ( EX_MEM_result )
+);
+
+wishbone_master IF_wb_master (
+    .clk_i      ( clk           ),
+    .rst_i      ( ~rstn_i       ),
+    .data_i     ( 32'b0         ),
+    .data_o     ( IF_data_i     ),
+    .addr_i     ( IF_addr_o     ),
+    .n_access_i ( 3'b1          ),
+    .we_i       ( 4'b0          ),
+    .valid_i    ( IF_en_o       ),
+    .valid_o    ( IF_memv_i     ),
+    .wb_bus     ( wb_masters[1] )
 );
 
 ID_stage ID_i (
@@ -176,15 +191,29 @@ MEM_stage MEM_i (
     .instr_i     ( EX_MEM_instr  ),
     .result_i    ( EX_MEM_result ),
     .rs2_i       ( EX_MEM_rs2    ),
-    .MEM_en_o    ( MEM_en_o      ),
-    .MEM_addr_o  ( MEM_addr_o    ),
-    .MEM_data_i  ( MEM_data_i    ),
-    .MEM_data_o  ( MEM_data_o    ),
-    .MEM_write_o ( MEM_write_o   ),
+    .mem_en_o    ( MEM_en_o      ),
+    .mem_addr_o  ( MEM_addr_o    ),
+    .mem_data_i  ( MEM_data_i    ),
+    .mem_data_o  ( MEM_data_o    ),
+    .mem_write_o ( MEM_write_o   ),
+    .mem_valid_i ( MEM_memv_i    ),
     .ack_i       ( WB_MEM_ack    ),
     .valid_o     ( MEM_WB_valid  ),
     .instr_o     ( MEM_WB_instr  ),
     .data_o      ( MEM_WB_data   )
+);
+
+wishbone_master MEM_wb_master (
+    .clk_i      ( clk           ),
+    .rst_i      ( ~rstn_i       ),
+    .data_i     ( MEM_data_o    ),
+    .data_o     ( MEM_data_i    ),
+    .addr_i     ( MEM_addr_o    ),
+    .n_access_i ( 3'b1          ),
+    .we_i       ( MEM_write_o   ),
+    .valid_i    ( MEM_en_o      ),
+    .valid_o    ( MEM_memv_i    ),
+    .wb_bus     ( wb_masters[0] )
 );
 
 WB_stage WB_i (
