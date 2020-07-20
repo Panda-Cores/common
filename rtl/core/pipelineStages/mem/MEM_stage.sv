@@ -35,11 +35,12 @@ module MEM_stage
     input logic [31:0]  rs2_i,
     input logic [31:0]  pc_i,
     //MEM-MEM
-    output logic        MEM_en_o,
-    output logic [31:0] MEM_addr_o,
-    input logic [31:0]  MEM_data_i,
-    output logic [31:0] MEM_data_o,
-    output logic [3:0]  MEM_write_o,
+    output logic        mem_en_o,
+    output logic [31:0] mem_addr_o,
+    input logic [31:0]  mem_data_i,
+    output logic [31:0] mem_data_o,
+    output logic [3:0]  mem_write_o,
+    input logic         mem_valid_i,
     //MEM-WB
     input logic         ack_i,
     output logic        valid_o,
@@ -58,15 +59,15 @@ struct packed {
 assign valid_o = data_q.valid;
 assign data_o = data_q.data;
 assign instr_o = data_q.instr;
-assign MEM_addr_o = result_i;
-assign MEM_data_o = rs2_i;
+assign mem_addr_o = result_i;
+assign mem_data_o = rs2_i;
 
 always_comb
 begin
     data_n = data_q;
     ack_o = 1'b0;
-    MEM_en_o = 1'b0;
-    MEM_write_o = 'b0;
+    mem_en_o = 1'b0;
+    mem_write_o = 'b0;
 
     // Data is no longer valid if we recieved and ack
     if(ack_i)
@@ -77,45 +78,49 @@ begin
         // to the memory and wait for the next stage to ack
         `LOAD: begin
             if((!data_q.valid || ack_i) && valid_i) begin
-                ack_o          = 1'b1;
-                data_n.valid   = 1'b1;
-                data_n.instr   = instr_i;
-                case(instr_i[13:12])
-                    2'b00:
-                        data_n.data = {{24{MEM_data_i[7]}}, MEM_data_i[7:0]};
-                    2'b01:
-                        data_n.data = {{16{MEM_data_i[15]}}, MEM_data_i[15:0]};
-                    2'b10:
-                        data_n.data = MEM_data_i;
-                    default: begin
-                    end
-                endcase
+                mem_en_o = 1'b1;
+                if(mem_valid_i) begin
+                    ack_o          = 1'b1;
+                    data_n.valid   = 1'b1;
+                    data_n.instr   = instr_i;
+                    case(instr_i[13:12])
+                        2'b00:
+                            data_n.data = {{24{mem_data_i[7]}}, mem_data_i[7:0]};
+                        2'b01:
+                            data_n.data = {{16{mem_data_i[15]}}, mem_data_i[15:0]};
+                        2'b10:
+                            data_n.data = mem_data_i;
+                        default: begin
+                        end
+                    endcase
+                end
             end
-            MEM_en_o = 1'b1;
         end
 
         // In case of LOAD or STORE, we give the respective signal
         // to the memory and wait for the next stage to ack
         `STORE: begin
-            if((!data_q.valid || ack_i) && valid_i)begin
-                ack_o          = 1'b1;
-                data_n         = {1'b1, instr_i, MEM_data_i};
-                MEM_en_o       = 1'b1;
-                MEM_write_o = 'b1111;
-                MEM_en_o    = 1'b1;
-            end
+            mem_en_o    = 1'b1;
             // Write the correct amount of bytes
             case(instr_i[13:12])
                 2'b00:
-                    MEM_write_o = 4'b0001;
+                    mem_write_o = 4'b0001;
                 2'b01:
-                    MEM_write_o = 4'b0011;
+                    mem_write_o = 4'b0011;
                 2'b10:
-                    MEM_write_o = 4'b1111;
+                    mem_write_o = 4'b1111;
                 default: begin
                 end
-            endcase
-            MEM_en_o    = 1'b1;            
+            endcase      
+            if((!data_q.valid || ack_i) && valid_i)begin
+                if(mem_valid_i) begin
+                    ack_o          = 1'b1;
+                    data_n         = {1'b1, instr_i, mem_data_i};
+                    mem_en_o       = 1'b1;
+                    mem_write_o = 'b1111;
+                    mem_en_o    = 1'b1;
+                end
+            end     
         end
 
         // In case of these, we can directly give the data to the

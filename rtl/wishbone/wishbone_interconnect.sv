@@ -37,7 +37,7 @@
 
 module wishbone_interconnect
 #(
-    parameter TAGSIZE,
+    parameter TAGSIZE = 2,
     parameter N_SLAVE,
     parameter N_MASTER
 )(

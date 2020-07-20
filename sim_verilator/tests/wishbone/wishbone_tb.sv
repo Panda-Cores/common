@@ -144,7 +144,7 @@ dual_ram #(
 ) slave1 (
     .clk        ( clk       ),
     .rstn_i     ( rstn_i    ),
-    .addrb_i    ( s1addr_o    ),
+    .addrb_i    ( s1addr_o  ),
     .enb_i      ( 1'b1      ),
     .web_i      ( s1wes     ),
     .dinb_i     ( s1data_o  ),

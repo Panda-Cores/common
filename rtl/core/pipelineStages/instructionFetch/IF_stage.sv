@@ -26,10 +26,11 @@ module IF_stage (
     output logic         valid_o,
     output logic  [31:0] instr_o,
     output logic  [31:0] pc_o,
-    //IF-MEM (TODO: cache)
-    output logic         MEM_en_o,
-    output logic [31:0]  MEM_addr_o,
-    input logic [31:0]   MEM_data_i,
+    //IF-MEM
+    output logic         mem_en_o,
+    output logic [31:0]  mem_addr_o,
+    input logic [31:0]   mem_data_i,
+    input logic          mem_valid_i,
     //Branching
     input logic [31:0]   pc_i,
     input logic          branch_i
@@ -46,7 +47,7 @@ struct packed {
     logic [31:0]    pc;
 } data_n, data_q;
 
-assign MEM_addr_o = pc_q;
+assign mem_addr_o = pc_q;
 
 assign valid_o = data_q.valid;
 assign instr_o = data_q.instr;
@@ -54,13 +55,16 @@ assign pc_o = data_q.pc;
 
 always_comb
 begin
-    MEM_en_o = 1'b1;
-    data_n  = data_q;
-    incr_pc = 1'b0;
+    mem_en_o = 1'b0;
+    data_n   = data_q;
+    incr_pc  = 1'b0;
 
     if((!data_q.valid || ack_i)) begin
-        data_n         = {1'b1, MEM_data_i, pc_q};
-        incr_pc        = 1'b1;
+        mem_en_o       = 1'b1;
+        if(mem_valid_i) begin
+            data_n         = {1'b1, mem_data_i, pc_q};
+            incr_pc        = 1'b1;
+        end
     end
 
     // Invalidate if flush and use the provided pc

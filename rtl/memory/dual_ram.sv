@@ -14,7 +14,6 @@
 // Functionality: Simple ram with dual read, single write ports
 //
 // ------------------------------------------------------------
-
 module dual_ram #(
     parameter SIZE = 1024
 )(
