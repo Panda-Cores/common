@@ -26,6 +26,7 @@ module store_unit
     input logic                        write_i,
     input logic [31:0]                 addr_i,
     input logic [31:0]                 data_i,
+    input logic [3:0]                  we_i,
     output logic                       valid_o,
     wb_master_bus_t                    wb_bus
 );
@@ -80,7 +81,7 @@ begin
             wb_cyc_o = 1'b1;
             if(wb_gnt_i) begin
                 wb_stb_o = 1'b1;
-                wb_sel_o = 4'b1111;
+                wb_sel_o = we_i;
                 if(wb_ack_i) begin
                     valid_o = 1'b1;
                     if(!write_i)
