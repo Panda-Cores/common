@@ -6,9 +6,10 @@ typedef unsigned __int128 uint128_t;
 
 TESTBENCH<Vlsu_tb> *tb;
 
-void write(int addr, int data){
+void write(int addr, int data, int sel){
     tb->m_core->write_i = 1;
     tb->m_core->read_i = 0;
+    tb->m_core->we_i = sel;
     tb->m_core->addr_i = addr;
     tb->m_core->data_i = data;
     tb->tick();
@@ -16,6 +17,7 @@ void write(int addr, int data){
         tb->tick();
     }
     tb->m_core->write_i = 0;
+    tb->m_core->we_i = 0;
 }
 
 int read(int addr){
@@ -33,7 +35,7 @@ int read(int addr){
 int test_lsu(){
     // Write with one master, read with the other and the other way around
     for(int i = 0; i < 0x80; i+=4){
-        write(i, (0xababcd00 + i));
+        write(i, (0xababcd00 + i), 0b1111);
         tb->tick();
         if(read(i) != (0xababcd00 + i))
             return i+1;

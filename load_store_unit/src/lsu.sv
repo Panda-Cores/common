@@ -38,6 +38,9 @@ logic su_valid;
 wb_master_bus_t#(.TAGSIZE(1)) lu_wb_bus;
 wb_master_bus_t#(.TAGSIZE(1)) su_wb_bus;
 
+assert property (@(edge clk) !(write_i && read_i))
+    else $error("reading and writing at the same time!");
+
 assign valid_o = (lu_valid & read_i) | (su_valid & write_i);
 
 load_unit lu_i(
