@@ -142,16 +142,27 @@ logic [31:0]         ms_adr;
 logic                ms_cyc;
 logic                ms_stb;
 
+logic                locked_n;
+logic                locked_q;
+
 // Master arbiter select block
 // sets master_arbiter to one-hot or 0
 always_comb
 begin
     master_arbiter_n = master_arbiter_q;
-    if((master_arbiter_q & ms_cyc_i) == 'b0) begin // The bus is free!
+
+    // Free the bus if not used
+    if((master_arbiter_q & ms_cyc_i) == 'b0) begin
         master_arbiter_n = 'b0;
-        // Give the bus to the highest priority (LSB) master
-        for(int i = N_MASTER; i >= 0; i = i - 1)
-            if(ms_cyc_i[i]) master_arbiter_n = 'b0 | (1 << i);
+        locked_n         = 1'b0;
+    end
+
+    // Give the bus to the highest priority (LSB) master
+    for(int i = N_MASTER; i >= 0; i = i - 1) begin
+        if(ms_cyc_i[i] && !locked_q) begin
+            master_arbiter_n = 'b0 | (1 << i);
+            locked_n         = mi_lock_i[i]; // lock the bus if requested
+        end
     end
 end
 
