@@ -1,0 +1,13 @@
+lsu_tb.sv
+../src/load_unit.sv
+../src/store_unit.sv
+../src/lsu.sv
+
+../../wishbone/src/wishbone_interconnect.sv
+../../wishbone/src/wishbone_slave.sv
+
+dual_ram.sv
+wb_ram_wrapper.sv
+
+-I../includes
+-I../../wishbone/includes

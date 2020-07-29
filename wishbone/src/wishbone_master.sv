@@ -23,19 +23,20 @@
 // ------------------------------------------------------------
 
 module wishbone_master #(
-    parameter TAGSIZE = 2
+    parameter TAGSIZE = 2,
+    parameter N_ACCESS = 8
 )(
 /* verilator lint_off UNDRIVEN */
-    input logic                     clk_i,
-    input logic                     rst_i,
-    input logic [31:0]              data_i,
-    output logic [31:0]             data_o,
-    input logic [31:0]              addr_i,
-    input logic [2:0]               n_access_i,
-    input logic [3:0]               we_i,
-    input logic                     valid_i,
-    output logic                    valid_o,
-    wb_master_bus_t                 wb_bus
+    input logic                         clk_i,
+    input logic                         rst_i,
+    input logic [31:0]                  data_i,
+    output logic [31:0]                 data_o,
+    input logic [31:0]                  addr_i,
+    input logic [$clog2(N_ACCESS)-1:0]  n_access_i,
+    input logic [3:0]                   we_i,
+    input logic                         valid_i,
+    output logic                        valid_o,
+    wb_master_bus_t                     wb_bus
 );
 
 
@@ -66,22 +67,23 @@ assign wb_gnt_i     = wb_bus.wb_gnt_i;
 assign wb_bus.wb_sel_o     = wb_sel_o;
 assign wb_bus.wb_stb_o     = wb_stb_o;
 assign wb_bus.wb_we_o      = wb_we_o;
-assign wb_bus.wb_lock_o    = wb_lock_o;
+assign wb_bus.wb_lock_o    = 'b0;
 assign wb_bus.wb_cyc_o     = wb_cyc_o;
-assign wb_bus.wb_tgc_o     = wb_tgc_o;
+assign wb_bus.wb_tgc_o     = 'b0;
 assign wb_bus.wb_dat_o     = wb_dat_o;
-assign wb_bus.wb_tgd_o     = wb_tgd_o;
+assign wb_bus.wb_tgd_o     = 'b0;
 assign wb_bus.wb_adr_o     = wb_adr_o;
-assign wb_bus.wb_tga_o     = wb_tga_o;
+assign wb_bus.wb_tga_o     = 'b0;
 
 enum logic [1:0] {IDLE, WRITE, READ} CS, NS;
 
-logic [31:0] addr_n, addr_q;
-logic [31:0] data_n, data_q;
-logic [2:0]  counter_n, counter_q;
-logic        incr_counter;
+logic [31:0]                 addr_n, addr_q;
+logic [31:0]                 data_n, data_q;
+logic [$clog2(N_ACCESS)-1:0] counter_n, counter_q;
+logic                        incr_counter;
 
-always_ff @(posedge clk_i, posedge rst_i) begin
+always_ff @(posedge clk_i, posedge rst_i)
+begin
     if(rst_i) begin
         CS <= IDLE;
     end else begin
@@ -98,14 +100,18 @@ end
 
 always_comb
 begin
+    NS       = CS;
     wb_cyc_o = 1'b0;
     wb_we_o  = 1'b0;
     wb_dat_o = 'b0;
     valid_o  = 1'b0;
+    wb_sel_o = 'b0;
+    wb_stb_o = 1'b0;
 
     incr_counter = 1'b0;
     addr_n = addr_q;
     wb_adr_o = addr_q;
+    counter_n = counter_q;
     data_n = data_i;
 
     case(CS)
@@ -116,10 +122,9 @@ begin
                 addr_n   = addr_i;
                 counter_n= 'b1;
                 wb_cyc_o = 1'b1;        // assert that we want to perform a transaction
-                if(we_i != 'b0) begin   // and jump into respective state
-                    wb_dat_o = data_i;
+                if(we_i != 'b0)   // and jump into respective state
                     NS = WRITE;
-                end else
+                else
                     NS = READ;
             end
         end
@@ -136,12 +141,11 @@ begin
                 wb_dat_o = data_q;
                 // When slave acknowledges the write, we return to idle and validate the write request
                 if(wb_ack_i) begin
-                    if(counter_q < n_access_i) begin
-                        NS = WRITE;
-                        incr_counter = 1'b1;
-                    end else
-                        NS = IDLE;
                     valid_o = 1'b1;
+                    if(counter_q < n_access_i)
+                        incr_counter = 1'b1;
+                    else
+                        NS = IDLE;
                 end
             end
         end
@@ -156,12 +160,11 @@ begin
                 data_o   = wb_dat_i;
                 // When slave acknowledge the read, return to idle and validate read request
                 if(wb_ack_i) begin
-                    if(counter_q < n_access_i) begin
-                        NS = READ;
-                        incr_counter = 1'b1;
-                    end else
-                        NS = IDLE;
                     valid_o = 1'b1;
+                    if(counter_q < n_access_i)
+                        incr_counter = 1'b1;
+                    else
+                        NS = IDLE;
                 end
             end
         end
