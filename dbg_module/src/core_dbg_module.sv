@@ -32,6 +32,18 @@ module core_dbg_module #(
   dbg_intf.dut              dbg_intf
 );
 
+always_comb
+begin
+    
+end
 
+always_ff @(posedge clk, negedge rstn_i)
+begin
+    if(!rstn_i) begin
+        
+    end else begin
+        
+    end
+end
 
 endmodule
