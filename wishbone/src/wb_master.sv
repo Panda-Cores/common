@@ -22,7 +22,7 @@
 //
 // ------------------------------------------------------------
 
-module wishbone_master #(
+module wb_master #(
     parameter TAGSIZE = 2,
     parameter N_ACCESS = 8
 )(
@@ -36,7 +36,7 @@ module wishbone_master #(
     input logic [3:0]                   we_i,
     input logic                         valid_i,
     output logic                        valid_o,
-    wb_master_bus_t                     wb_bus
+    wb_bus_t.master                     wb_bus
 );
 
 
@@ -58,22 +58,22 @@ logic               wb_we_o;   // write enable
 logic               wb_gnt_i;  // Bus granted by interconnect
 
 // local variables to wishbone bus (just dont want to rewrite everything ':D)
-assign wb_dat_i     = wb_bus.wb_dat_i;
-assign wb_tgd_i     = wb_bus.wb_tgd_i;
-assign wb_ack_i     = wb_bus.wb_ack_i;
-assign wb_err_i     = wb_bus.wb_err_i;
-assign wb_rty_i     = wb_bus.wb_rty_i;
-assign wb_gnt_i     = wb_bus.wb_gnt_i;
-assign wb_bus.wb_sel_o     = wb_sel_o;
-assign wb_bus.wb_stb_o     = wb_stb_o;
-assign wb_bus.wb_we_o      = wb_we_o;
-assign wb_bus.wb_lock_o    = 'b0;
-assign wb_bus.wb_cyc_o     = wb_cyc_o;
-assign wb_bus.wb_tgc_o     = 'b0;
-assign wb_bus.wb_dat_o     = wb_dat_o;
-assign wb_bus.wb_tgd_o     = 'b0;
-assign wb_bus.wb_adr_o     = wb_adr_o;
-assign wb_bus.wb_tga_o     = 'b0;
+assign wb_dat_i     = wb_bus.wb_dat_sm;
+assign wb_tgd_i     = wb_bus.wb_tgd_sm;
+assign wb_ack_i     = wb_bus.wb_ack;
+assign wb_err_i     = wb_bus.wb_err;
+assign wb_rty_i     = wb_bus.wb_rty;
+assign wb_gnt_i     = wb_bus.wb_gnt;
+assign wb_bus.wb_sel     = wb_sel_o;
+assign wb_bus.wb_stb     = wb_stb_o;
+assign wb_bus.wb_we      = wb_we_o;
+assign wb_bus.wb_lock    = 'b0;
+assign wb_bus.wb_cyc     = wb_cyc_o;
+assign wb_bus.wb_tgc     = 'b0;
+assign wb_bus.wb_dat_ms     = wb_dat_o;
+assign wb_bus.wb_tgd_ms     = 'b0;
+assign wb_bus.wb_adr     = wb_adr_o;
+assign wb_bus.wb_tga     = 'b0;
 
 enum logic [1:0] {IDLE, WRITE, READ} CS, NS;
 
