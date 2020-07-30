@@ -9,7 +9,7 @@
 //
 // ------------------------------------------------------------
 //
-// Module name: dbg_module
+// Module name: dbg_intf
 //
 // Authors: Luca Hanel
 // 
@@ -17,20 +17,26 @@
 //
 // ------------------------------------------------------------
 
+`ifndef DBG_INTF_SV
+`define DBG_INFT_SV
+
 interface dbg_intf#(parameter BITSIZE = 32);
-    wire [15:0]                 cmd;
+    wire [7:0]                  cmd;
     wire [BITSIZE-1:0]          addr;
     wire [BITSIZE-1:0]          data_dut_dbg;
     wire [BITSIZE-1:0]          data_dbg_dut;
     wire                        dut_ready;
+    wire                        dut_done;
 
     modport dut (
         input cmd, addr, data_dbg_dut,
-        output data_dut_dbg, dut_ready
+        output data_dut_dbg, dut_ready, dut_done
     );
 
     modport dbg (
-        input data_dut_dbg, dut_ready,
+        input data_dut_dbg, dut_ready, dut_done,
         output cmd, addr, data_dbg_dut
     );
 endinterface //dbg_intf
+
+`endif

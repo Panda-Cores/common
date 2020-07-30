@@ -52,16 +52,15 @@ module dbg_module #(
   input logic [31:0]        data_i,
   output logic [31:0]       data_o,
   output logic              ready_o,
-  output logic              halt_core_o,
   output logic              core_rst_req_o,
   output logic              periph_rst_req_o,
+  dbg_intf.dbg              dbg_intf,
   wb_master_bus_t           wb_bus
 );
 
 // Registers
 logic [31:0]  data_n, data_q;
 logic         ready_n, ready_q;
-logic         core_halted_n, core_halted_q;
 
 // LSU signals
 logic [31:0]  lsu_data_i, lsu_data_o;
@@ -84,7 +83,6 @@ lsu lsu_i(
 );
 
 assign lsu_data_i = data_i;
-assign halt_core_o = core_halted_q;
 assign ready_o  = ready_q;
 assign data_o   = data_q;
 
@@ -97,7 +95,9 @@ begin
   periph_rst_req_o = 1'b0;
   ready_n   = ready_q;
   data_n    = data_q;
-  core_halted_n = core_halted_q;
+  dbg_intf.cmd          = 'b0;
+  dbg_intf.addr         = 'b0;
+  dbg_intf.data_dbg_dut = 'b0;
 
   case(cmd_i[7:0])
     8'h00: begin // reserved for doing nothing
@@ -123,13 +123,25 @@ begin
     end
 
     8'h03: begin // Halt the core
-      ready_n = 1'b1;
-      core_halted_n = 1'b1;
+      ready_n = 1'b0;
+      if(dbg_intf.dut_ready) begin
+        dbg_intf.cmd = 8'h01;
+        if(dbg_intf.dut_done) begin
+          dbg_intf.cmd = 8'h0;
+          ready_n = 1'b1;
+        end
+      end
     end
 
     8'h04: begin // Resume the core
-      ready_n = 1'b1;
-      core_halted_n = 1'b0;
+      ready_n = 1'b0;
+      if(dbg_intf.dut_ready) begin
+        dbg_intf.cmd = 8'h02;
+        if(dbg_intf.dut_done) begin
+          dbg_intf.cmd = 8'h0;
+          ready_n = 1'b1;
+        end
+      end
     end
 
     8'h05: begin // Reset the core
@@ -148,6 +160,32 @@ begin
       core_rst_req_o = 1'b1;
     end
 
+    8'h10: begin // Read register
+      ready_n = 1'b0;
+      if(dbg_intf.dut_ready) begin
+        dbg_intf.cmd = 8'h02;
+        dbg_intf.addr[4:0] = addr_i[4:0];
+        if(dbg_intf.dut_done) begin
+          dbg_intf.cmd = 8'h0;
+          data_n = dbg_intf.data_dut_dbg;
+          ready_n = 1'b1;
+        end
+      end
+    end
+
+    8'h20: begin // Write register
+      ready_n = 1'b0;
+      if(dbg_intf.dut_ready) begin
+        dbg_intf.cmd = 8'h02;
+        dbg_intf.addr[4:0] = addr_i[4:0];
+        dbg_intf.data_dbg_dut = data_i;
+        if(dbg_intf.dut_done) begin
+          dbg_intf.cmd = 8'h0;
+          ready_n = 1'b1;
+        end
+      end
+    end
+
     default: begin
       ready_n = 1'b1;
     end
@@ -159,11 +197,9 @@ begin
   if(!rstn_i) begin
     ready_q   <= 1'b1;
     data_q    <= 'b0;
-    core_halted_q <= 1'b0;    
   end else begin
     ready_q   <= ready_n;
     data_q    <= data_n;
-    core_halted_q <= core_halted_n;
   end
 end
 
