@@ -33,9 +33,9 @@
 //
 // ------------------------------------------------------------
 
-`include "wishbone_interfaces.sv"
+`include "wb_intf.sv"
 
-module wishbone_interconnect
+module wb_xbar
 #(
     parameter TAGSIZE = 2,
     parameter N_SLAVE,
@@ -50,9 +50,9 @@ module wishbone_interconnect
     input logic [N_SLAVE-1:0][31:0] SEND_ADDR,   // Slave end addresses
     
     // MASTERS
-    wb_master_bus_t                 wb_master_bus[N_MASTER],
+    wb_bus_t.slave                   wb_slave_port[N_MASTER],
     // SLAVES
-    wb_slave_bus_t                  wb_slave_bus[N_SLAVE]
+    wb_bus_t.master                  wb_master_port[N_SLAVE]
 );
 
 // master signals
@@ -94,43 +94,43 @@ genvar ii;
 // connect master signals to local signals
 for(ii = 0; ii < N_MASTER; ii = ii + 1) begin
     // inputs
-    assign ms_dat_i[ii]  = wb_master_bus[ii].wb_dat_o;
-    assign ms_tgd_i[ii]  = wb_master_bus[ii].wb_tgd_o;
-    assign ms_adr_i[ii]  = wb_master_bus[ii].wb_adr_o;
-    assign ms_tga_i[ii]  = wb_master_bus[ii].wb_tga_o;
-    assign ms_cyc_i[ii]  = wb_master_bus[ii].wb_cyc_o;
-    assign ms_tgc_i[ii]  = wb_master_bus[ii].wb_tgc_o;
-    assign ms_sel_i[ii]  = wb_master_bus[ii].wb_sel_o;
-    assign ms_stb_i[ii]  = wb_master_bus[ii].wb_stb_o;
-    assign ms_we_i[ii]   = wb_master_bus[ii].wb_we_o;
-    assign mi_lock_i[ii] = wb_master_bus[ii].wb_lock_o;
+    assign ms_dat_i[ii]  = wb_slave_port[ii].wb_dat_ms;
+    assign ms_tgd_i[ii]  = wb_slave_port[ii].wb_tgd_ms;
+    assign ms_adr_i[ii]  = wb_slave_port[ii].wb_adr;
+    assign ms_tga_i[ii]  = wb_slave_port[ii].wb_tga;
+    assign ms_cyc_i[ii]  = wb_slave_port[ii].wb_cyc;
+    assign ms_tgc_i[ii]  = wb_slave_port[ii].wb_tgc;
+    assign ms_sel_i[ii]  = wb_slave_port[ii].wb_sel;
+    assign ms_stb_i[ii]  = wb_slave_port[ii].wb_stb;
+    assign ms_we_i[ii]   = wb_slave_port[ii].wb_we;
+    assign mi_lock_i[ii] = wb_slave_port[ii].wb_lock;
     // outputs
-    assign wb_master_bus[ii].wb_dat_i = sm_dat_o;
-    assign wb_master_bus[ii].wb_tgd_i = sm_tgd_o;
-    assign wb_master_bus[ii].wb_ack_i = sm_ack_o;
-    assign wb_master_bus[ii].wb_err_i = sm_err_o;
-    assign wb_master_bus[ii].wb_rty_i = sm_rty_o;
-    assign wb_master_bus[ii].wb_gnt_i = im_gnt_o[ii];
+    assign wb_slave_port[ii].wb_dat_sm = sm_dat_o;
+    assign wb_slave_port[ii].wb_tgd_sm = sm_tgd_o;
+    assign wb_slave_port[ii].wb_ack = sm_ack_o;
+    assign wb_slave_port[ii].wb_err = sm_err_o;
+    assign wb_slave_port[ii].wb_rty = sm_rty_o;
+    assign wb_slave_port[ii].wb_gnt = im_gnt_o[ii];
 end
 
 // connect slave signals to local signals
 for(ii = 0; ii < N_SLAVE; ii = ii + 1) begin
     // inputs
-    assign sm_dat_i[ii] = wb_slave_bus[ii].wb_dat_o;
-    assign sm_tgd_i[ii] = wb_slave_bus[ii].wb_tgd_o;
-    assign sm_ack_i[ii] = wb_slave_bus[ii].wb_ack_o;
-    assign sm_err_i[ii] = wb_slave_bus[ii].wb_err_o;
-    assign sm_rty_i[ii] = wb_slave_bus[ii].wb_rty_o;
+    assign sm_dat_i[ii] = wb_master_port[ii].wb_dat_sm;
+    assign sm_tgd_i[ii] = wb_master_port[ii].wb_tgd_sm;
+    assign sm_ack_i[ii] = wb_master_port[ii].wb_ack;
+    assign sm_err_i[ii] = wb_master_port[ii].wb_err;
+    assign sm_rty_i[ii] = wb_master_port[ii].wb_rty;
     // outputs
-    assign wb_slave_bus[ii].wb_dat_i = ms_dat_o;
-    assign wb_slave_bus[ii].wb_tgd_i = ms_tgd_o;
-    assign wb_slave_bus[ii].wb_adr_i = ms_adr_o;
-    assign wb_slave_bus[ii].wb_tga_i = ms_tga_o;
-    assign wb_slave_bus[ii].wb_cyc_i = ms_cyc_o[ii];
-    assign wb_slave_bus[ii].wb_tgc_i = ms_tgc_o;
-    assign wb_slave_bus[ii].wb_sel_i = ms_sel_o;
-    assign wb_slave_bus[ii].wb_stb_i = ms_stb_o[ii];
-    assign wb_slave_bus[ii].wb_we_i  = ms_we_o;
+    assign wb_master_port[ii].wb_dat_ms = ms_dat_o;
+    assign wb_master_port[ii].wb_tgd_ms = ms_tgd_o;
+    assign wb_master_port[ii].wb_adr = ms_adr_o;
+    assign wb_master_port[ii].wb_tga = ms_tga_o;
+    assign wb_master_port[ii].wb_cyc = ms_cyc_o[ii];
+    assign wb_master_port[ii].wb_tgc = ms_tgc_o;
+    assign wb_master_port[ii].wb_sel = ms_sel_o;
+    assign wb_master_port[ii].wb_stb = ms_stb_o[ii];
+    assign wb_master_port[ii].wb_we  = ms_we_o;
 end
 
 
