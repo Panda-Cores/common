@@ -29,14 +29,14 @@ module lsu(
     input logic [31:0]          data_i,
     output logic [31:0]         data_o,
     output logic                valid_o,
-    wb_master_bus_t             wb_bus
+    wb_bus_t.master             wb_bus
 );
 
 logic lu_valid;
 logic su_valid;
 
-wb_master_bus_t#(.TAGSIZE(1)) lu_wb_bus;
-wb_master_bus_t#(.TAGSIZE(1)) su_wb_bus;
+wb_bus_t#(.TAGSIZE(1)) lu_wb_bus;
+wb_bus_t#(.TAGSIZE(1)) su_wb_bus;
 
 assert property (@(edge clk) !(write_i && read_i))
     else $error("reading and writing at the same time!");
@@ -66,53 +66,53 @@ store_unit su_i(
 
 always_comb
 begin
-    wb_bus.wb_dat_o  = 'b0;
-    wb_bus.wb_tgd_o  = 'b0;
-    wb_bus.wb_adr_o  = 'b0;
-    wb_bus.wb_tga_o  = 'b0;
-    wb_bus.wb_cyc_o  = 'b0;
-    wb_bus.wb_tgc_o  = 'b0;
-    wb_bus.wb_sel_o  = 'b0;
-    wb_bus.wb_stb_o  = 'b0;
-    wb_bus.wb_we_o   = 'b0;
-    wb_bus.wb_lock_o = 'b0;
+    wb_bus.wb_dat_ms  = 'b0;
+    wb_bus.wb_tgd_ms  = 'b0;
+    wb_bus.wb_adr  = 'b0;
+    wb_bus.wb_tga  = 'b0;
+    wb_bus.wb_cyc  = 'b0;
+    wb_bus.wb_tgc  = 'b0;
+    wb_bus.wb_sel  = 'b0;
+    wb_bus.wb_stb  = 'b0;
+    wb_bus.wb_we   = 'b0;
+    wb_bus.wb_lock = 'b0;
 
     if(read_i) begin
-        wb_bus.wb_dat_o  = lu_wb_bus.wb_dat_o;
-        wb_bus.wb_tgd_o  = lu_wb_bus.wb_tgd_o;
-        wb_bus.wb_adr_o  = lu_wb_bus.wb_adr_o;
-        wb_bus.wb_tga_o  = lu_wb_bus.wb_tga_o;
-        wb_bus.wb_cyc_o  = lu_wb_bus.wb_cyc_o;
-        wb_bus.wb_tgc_o  = lu_wb_bus.wb_tgc_o;
-        wb_bus.wb_sel_o  = lu_wb_bus.wb_sel_o;
-        wb_bus.wb_stb_o  = lu_wb_bus.wb_stb_o;
-        wb_bus.wb_we_o   = lu_wb_bus.wb_we_o;
-        wb_bus.wb_lock_o = lu_wb_bus.wb_lock_o;
-        lu_wb_bus.wb_dat_i = wb_bus.wb_dat_i;
-        lu_wb_bus.wb_tgd_i = wb_bus.wb_tgd_i;
-        lu_wb_bus.wb_ack_i = wb_bus.wb_ack_i;
-        lu_wb_bus.wb_err_i = wb_bus.wb_err_i;
-        lu_wb_bus.wb_rty_i = wb_bus.wb_rty_i;
-        lu_wb_bus.wb_gnt_i = wb_bus.wb_gnt_i;
+        wb_bus.wb_dat_ms  = lu_wb_bus.wb_dat_ms;
+        wb_bus.wb_tgd_ms  = lu_wb_bus.wb_tgd_ms;
+        wb_bus.wb_adr  = lu_wb_bus.wb_adr;
+        wb_bus.wb_tga  = lu_wb_bus.wb_tga;
+        wb_bus.wb_cyc  = lu_wb_bus.wb_cyc;
+        wb_bus.wb_tgc  = lu_wb_bus.wb_tgc;
+        wb_bus.wb_sel  = lu_wb_bus.wb_sel;
+        wb_bus.wb_stb  = lu_wb_bus.wb_stb;
+        wb_bus.wb_we   = lu_wb_bus.wb_we;
+        wb_bus.wb_lock = lu_wb_bus.wb_lock;
+        lu_wb_bus.wb_dat_sm = wb_bus.wb_dat_sm;
+        lu_wb_bus.wb_tgd_sm = wb_bus.wb_tgd_sm;
+        lu_wb_bus.wb_ack = wb_bus.wb_ack;
+        lu_wb_bus.wb_err = wb_bus.wb_err;
+        lu_wb_bus.wb_rty = wb_bus.wb_rty;
+        lu_wb_bus.wb_gnt = wb_bus.wb_gnt;
     end
 
     if(write_i) begin
-        wb_bus.wb_dat_o  = su_wb_bus.wb_dat_o;
-        wb_bus.wb_tgd_o  = su_wb_bus.wb_tgd_o;
-        wb_bus.wb_adr_o  = su_wb_bus.wb_adr_o;
-        wb_bus.wb_tga_o  = su_wb_bus.wb_tga_o;
-        wb_bus.wb_cyc_o  = su_wb_bus.wb_cyc_o;
-        wb_bus.wb_tgc_o  = su_wb_bus.wb_tgc_o;
-        wb_bus.wb_sel_o  = su_wb_bus.wb_sel_o;
-        wb_bus.wb_stb_o  = su_wb_bus.wb_stb_o;
-        wb_bus.wb_we_o   = su_wb_bus.wb_we_o;
-        wb_bus.wb_lock_o = su_wb_bus.wb_lock_o;
-        su_wb_bus.wb_dat_i = wb_bus.wb_dat_i;
-        su_wb_bus.wb_tgd_i = wb_bus.wb_tgd_i;
-        su_wb_bus.wb_ack_i = wb_bus.wb_ack_i;
-        su_wb_bus.wb_err_i = wb_bus.wb_err_i;
-        su_wb_bus.wb_rty_i = wb_bus.wb_rty_i;
-        su_wb_bus.wb_gnt_i = wb_bus.wb_gnt_i;
+        wb_bus.wb_dat_ms  = su_wb_bus.wb_dat_ms;
+        wb_bus.wb_tgd_ms  = su_wb_bus.wb_tgd_ms;
+        wb_bus.wb_adr  = su_wb_bus.wb_adr;
+        wb_bus.wb_tga  = su_wb_bus.wb_tga;
+        wb_bus.wb_cyc  = su_wb_bus.wb_cyc;
+        wb_bus.wb_tgc  = su_wb_bus.wb_tgc;
+        wb_bus.wb_sel  = su_wb_bus.wb_sel;
+        wb_bus.wb_stb  = su_wb_bus.wb_stb;
+        wb_bus.wb_we   = su_wb_bus.wb_we;
+        wb_bus.wb_lock = su_wb_bus.wb_lock;
+        su_wb_bus.wb_dat_sm = wb_bus.wb_dat_sm;
+        su_wb_bus.wb_tgd_sm = wb_bus.wb_tgd_sm;
+        su_wb_bus.wb_ack = wb_bus.wb_ack;
+        su_wb_bus.wb_err = wb_bus.wb_err;
+        su_wb_bus.wb_rty = wb_bus.wb_rty;
+        su_wb_bus.wb_gnt = wb_bus.wb_gnt;
     end
 end
     

@@ -27,7 +27,7 @@ module load_unit
     input logic [31:0]                 addr_i,
     output logic                       valid_o,
     output logic [31:0]                data_o,
-    wb_master_bus_t                    wb_bus
+    wb_bus_t.master                    wb_bus
 );
 
 enum logic {IDLE, READ} CS, NS;
@@ -42,22 +42,22 @@ logic               wb_stb_o;  // strobe out, valid data transfer. Slave respond
 logic               wb_gnt_i;  // Bus granted by interconnect
 
 // local variables to wishbone bus (just dont want to rewrite everything ':D)
-assign wb_dat_i     = wb_bus.wb_dat_i;
+assign wb_dat_i     = wb_bus.wb_dat_sm;
 // assign wb_tgd_i     = wb_bus.wb_tgd_i;
-assign wb_ack_i     = wb_bus.wb_ack_i;
+assign wb_ack_i     = wb_bus.wb_ack;
 // assign wb_err_i     = wb_bus.wb_err_i;
 // assign wb_rty_i     = wb_bus.wb_rty_i;
-assign wb_gnt_i     = wb_bus.wb_gnt_i;
-assign wb_bus.wb_sel_o     = wb_sel_o;
-assign wb_bus.wb_stb_o     = wb_stb_o;
-assign wb_bus.wb_we_o      = 'b0;
-assign wb_bus.wb_lock_o    = 'b0;
-assign wb_bus.wb_cyc_o     = wb_cyc_o;
-assign wb_bus.wb_tgc_o     = 'b0;
-assign wb_bus.wb_dat_o     = 'b0;
-assign wb_bus.wb_tgd_o     = 'b0;
-assign wb_bus.wb_adr_o     = addr_i;
-assign wb_bus.wb_tga_o     = 'b0;
+assign wb_gnt_i     = wb_bus.wb_gnt;
+assign wb_bus.wb_sel     = wb_sel_o;
+assign wb_bus.wb_stb     = wb_stb_o;
+assign wb_bus.wb_we      = 'b0;
+assign wb_bus.wb_lock    = 'b0;
+assign wb_bus.wb_cyc     = wb_cyc_o;
+assign wb_bus.wb_tgc     = 'b0;
+assign wb_bus.wb_dat_ms  = 'b0;
+assign wb_bus.wb_tgd_ms  = 'b0;
+assign wb_bus.wb_adr     = addr_i;
+assign wb_bus.wb_tga     = 'b0;
 
 // State machine for wb master
 always_comb
