@@ -23,9 +23,8 @@
 //            0x2:  Resume the core
 //            0x3:  Read from register file
 //            0x4:  Write to register file
-//            0x5:  TODO: Read pc
-//            0x6:  TODO: Write pc & flush the pipeline
-//            0x7:  TODO: flush the pipeline but remain and current pc
+//            0x5:  Read pc
+//            0x6:  Write pc & flush the pipeline
 //
 // TODO:      See above
 //
@@ -43,18 +42,19 @@ module core_dbg_module(
   output logic [4:0]        rd_o,
   output logic [31:0]       rd_do,
   output logic              flush_o,
+  input logic [31:0]        pc_i,
   output logic [31:0]       pc_o
 );
 
 logic core_halted_n;
 logic core_halted_q;
-logic reg_req_n;
-logic reg_req_q;
+logic tmp_halt_n;
+logic tmp_halt_q;
 logic done_n;
 logic done_q;
 
 // halt the core if one of "halt core" or "access register" is true
-assign halt_core_o = core_halted_q | reg_req_q;
+assign halt_core_o = core_halted_q | tmp_halt_q;
 assign dbg_bus.dut_done = done_q;
 
 always_comb
@@ -64,7 +64,7 @@ begin
     rd_do         = 'b0;
     rs_o          = 'b0;
     done_n        = 1'b0;
-    reg_req_n     = 1'b0;
+    tmp_halt_n     = 1'b0;
     flush_o       = 1'b0;
     pc_o          = 'b0;
 
@@ -83,11 +83,11 @@ begin
 
         8'h03: begin // Read register
             // halt the core to mux the register file to the debug module
-            reg_req_n     = 1'b1;
+            tmp_halt_n     = 1'b1;
             rs_o          = dbg_bus.addr[4:0];
             // Once halted, we can read the register file
-            if(core_halted_q) begin
-                reg_req_n  = 1'b0;
+            if(tmp_halt_q || core_halted_q) begin
+                tmp_halt_n  = 1'b0;
                 done_n  = 1'b1;
                 dbg_bus.data_dut_dbg = rs_di;
             end
@@ -95,12 +95,27 @@ begin
 
         8'h04: begin // Write register
             // halt the core to mux the register file to he debug module
-            reg_req_n     = 1'b1;
-            if(core_halted_q) begin
+            tmp_halt_n     = 1'b1;
+            if(tmp_halt_q || core_halted_q) begin
                 rd_o    = dbg_bus.addr[4:0];
                 rd_do   = dbg_bus.data_dbg_dut;
-                reg_req_n = 1'b0;
+                tmp_halt_n = 1'b0;
                 done_n  = 1'b1;
+            end
+        end
+
+        8'h05: begin // Read the pc
+            done_n = 1'b1;
+            dbg_bus.data_dut_dbg = pc_i;
+        end
+
+        8'h06: begin // Set the pc
+            tmp_halt_n  = 1'b1;
+            flush_o     = 1'b1;
+            pc_o        = dbg_bus.data_dbg_dut;
+            if(tmp_halt_q || core_halted_q) begin
+                done_n    = 1'b1;
+                tmp_halt_n = 1'b0;
             end
         end
 
@@ -114,7 +129,7 @@ begin
         core_halted_q <= 1'b0;
     end else begin
         core_halted_q <= core_halted_n;
-        reg_req_q     <= reg_req_n;
+        tmp_halt_q     <= tmp_halt_n;
         done_q        <= done_n;
     end
 end
