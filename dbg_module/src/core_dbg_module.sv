@@ -13,12 +13,21 @@
 //
 // Authors: Luca Hanel
 // 
-// Functionality: 
+// Functionality: A debug module for the core, can read registers
+//                and in the future should be able to flush the
+//                pipeline and set&read the pc
 //
 // Commands:
+//            0x0:  Reserved for doing nothing
+//            0x1:  Halt the core
+//            0x2:  Resume the core
+//            0x3:  Read from register file
+//            0x4:  Write to register file
+//            0x5:  TODO: Read pc
+//            0x6:  TODO: Write pc & flush the pipeline
+//            0x7:  TODO: flush the pipeline but remain and current pc
 //
-// TODO:      Read & write register file
-//            Read (and maybe write for IF) inter-stage pc & instr
+// TODO:      See above
 //
 // ------------------------------------------------------------
 
