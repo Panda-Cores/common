@@ -25,16 +25,15 @@ interface dbg_intf#(parameter BITSIZE = 32);
     wire [BITSIZE-1:0]          addr;
     wire [BITSIZE-1:0]          data_dut_dbg;
     wire [BITSIZE-1:0]          data_dbg_dut;
-    wire                        dut_ready;
     wire                        dut_done;
 
     modport dut (
         input cmd, addr, data_dbg_dut,
-        output data_dut_dbg, dut_ready, dut_done
+        output data_dut_dbg, dut_done
     );
 
     modport dbg (
-        input data_dut_dbg, dut_ready, dut_done,
+        input data_dut_dbg, dut_done,
         output cmd, addr, data_dbg_dut
     );
 endinterface //dbg_intf

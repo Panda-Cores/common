@@ -35,16 +35,17 @@
 //            h05 : reset the core
 //            h06 : reset peripherals
 //            h07 : reset core & peripherals
+//            h10 : read register (address field used)
+//            h20 : write register (address field used)
 //
 //
-// TODO:      Read & write register file
-//            Read (and maybe write for IF) inter-stage pc & instr
+// TODO:      Read (and maybe write for IF) inter-stage pc & instr
 //
 // ------------------------------------------------------------
+/* verilator lint_off MODDUP */
+`include "dbg_intf.sv"
 
-module dbg_module #(
-  parameter INTERNAL_MEM_S = 32
-)(
+module dbg_module(
   input logic               clk,
   input logic               rstn_i,
   input logic [7:0]         cmd_i,
@@ -54,7 +55,7 @@ module dbg_module #(
   output logic              ready_o,
   output logic              core_rst_req_o,
   output logic              periph_rst_req_o,
-  dbg_intf.dbg              dbg_intf,
+  dbg_intf.dbg              dbg_bus,
   wb_master_bus_t           wb_bus
 );
 
@@ -95,16 +96,16 @@ begin
   periph_rst_req_o = 1'b0;
   ready_n   = ready_q;
   data_n    = data_q;
-  dbg_intf.cmd          = 'b0;
-  dbg_intf.addr         = 'b0;
-  dbg_intf.data_dbg_dut = 'b0;
+  dbg_bus.cmd          = 'b0;
+  dbg_bus.addr         = 'b0;
+  dbg_bus.data_dbg_dut = 'b0;
 
-  case(cmd_i[7:0])
+  case(cmd_i)
     8'h00: begin // reserved for doing nothing
       ready_n = 1'b1;
     end
 
-    8'h01: begin // Read from addres
+    8'h01: begin // Read from address
       lsu_read  = 1'b1;
       ready_n   = 1'b0;
       if(lsu_valid) begin
@@ -124,23 +125,19 @@ begin
 
     8'h03: begin // Halt the core
       ready_n = 1'b0;
-      if(dbg_intf.dut_ready) begin
-        dbg_intf.cmd = 8'h01;
-        if(dbg_intf.dut_done) begin
-          dbg_intf.cmd = 8'h0;
-          ready_n = 1'b1;
-        end
+      dbg_bus.cmd = 8'h01;
+      if(dbg_bus.dut_done) begin
+        dbg_bus.cmd = 8'h0;
+        ready_n = 1'b1;
       end
     end
 
     8'h04: begin // Resume the core
       ready_n = 1'b0;
-      if(dbg_intf.dut_ready) begin
-        dbg_intf.cmd = 8'h02;
-        if(dbg_intf.dut_done) begin
-          dbg_intf.cmd = 8'h0;
-          ready_n = 1'b1;
-        end
+      dbg_bus.cmd = 8'h02;
+      if(dbg_bus.dut_done) begin
+        dbg_bus.cmd = 8'h0;
+        ready_n = 1'b1;
       end
     end
 
@@ -162,27 +159,23 @@ begin
 
     8'h10: begin // Read register
       ready_n = 1'b0;
-      if(dbg_intf.dut_ready) begin
-        dbg_intf.cmd = 8'h02;
-        dbg_intf.addr[4:0] = addr_i[4:0];
-        if(dbg_intf.dut_done) begin
-          dbg_intf.cmd = 8'h0;
-          data_n = dbg_intf.data_dut_dbg;
-          ready_n = 1'b1;
-        end
+      dbg_bus.cmd = 8'h03;
+      dbg_bus.addr[4:0] = addr_i[4:0];
+      if(dbg_bus.dut_done) begin
+        dbg_bus.cmd = 8'h0;
+        data_n = dbg_bus.data_dut_dbg;
+        ready_n = 1'b1;
       end
     end
 
     8'h20: begin // Write register
       ready_n = 1'b0;
-      if(dbg_intf.dut_ready) begin
-        dbg_intf.cmd = 8'h02;
-        dbg_intf.addr[4:0] = addr_i[4:0];
-        dbg_intf.data_dbg_dut = data_i;
-        if(dbg_intf.dut_done) begin
-          dbg_intf.cmd = 8'h0;
-          ready_n = 1'b1;
-        end
+      dbg_bus.cmd = 8'h04;
+      dbg_bus.addr[4:0] = addr_i[4:0];
+      dbg_bus.data_dbg_dut = data_i;
+      if(dbg_bus.dut_done) begin
+        dbg_bus.cmd = 8'h0;
+        ready_n = 1'b1;
       end
     end
 
