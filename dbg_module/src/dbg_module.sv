@@ -56,7 +56,7 @@ module dbg_module(
   output logic              core_rst_req_o,
   output logic              periph_rst_req_o,
   dbg_intf.dbg              dbg_bus,
-  wb_master_bus_t           wb_bus
+  wb_bus_t.master           wb_bus
 );
 
 // Registers
