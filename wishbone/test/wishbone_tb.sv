@@ -15,7 +15,7 @@
 //
 // ------------------------------------------------------------
 
-`include "wishbone_interfaces.sv"
+`include "wb_intf.sv"
 
 module wishbone_tb
 (
@@ -51,25 +51,25 @@ logic        s1we;
 logic [3:0]  s1wes;
 assign s1wes = (s1we) ? s1sel : 4'b0000;
 
-wb_master_bus_t#(.TAGSIZE(1)) wb_master[N_MASTER];
-wb_slave_bus_t#(.TAGSIZE(1))  wb_slave[N_SLAVE];
+wb_bus_t#(.TAGSIZE(1)) wb_master[N_MASTER];
+wb_bus_t#(.TAGSIZE(1)) wb_slave[N_SLAVE];
 
 
 
-wishbone_interconnect #(
+wb_xbar #(
     .TAGSIZE    (1),
     .N_SLAVE    ( N_SLAVE ),
     .N_MASTER   ( N_MASTER )
-) intercon (
+) wb_xbar_i (
     .clk_i      ( clk ),
     .rst_i      ( ~rstn_i ),
     .SSTART_ADDR({32'h10, 32'h0}),
     .SEND_ADDR  ({32'h1f, 32'hf}),
-    .wb_master_bus(wb_master),
-    .wb_slave_bus(wb_slave)
+    .wb_slave_port(wb_master),
+    .wb_master_port(wb_slave)
 );
 
-wishbone_master #(
+wb_master #(
     .TAGSIZE    (1)
 ) wbmaster0 (
     .clk_i      ( clk       ),
@@ -84,7 +84,7 @@ wishbone_master #(
     .wb_bus     ( wb_master[0])
 );
 
-wishbone_master #(
+wb_master #(
     .TAGSIZE    (1)
 ) wbmaster1 (
     .clk_i      ( clk       ),
@@ -99,7 +99,7 @@ wishbone_master #(
     .wb_bus     ( wb_master[1])
 );
 
-wishbone_slave #(
+wb_slave #(
     .TAGSIZE    (1)
 ) wbslave0 (
     .clk_i      ( clk      ),
@@ -113,7 +113,7 @@ wishbone_slave #(
     .wb_bus     ( wb_slave[0])
 );
 
-wishbone_slave #(
+wb_slave #(
     .TAGSIZE    (1)
 ) wbslave1 (
     .clk_i      ( clk      ),

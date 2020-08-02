@@ -1,8 +1,8 @@
 wishbone_tb.sv
 
-../src/wishbone_interconnect.sv
-../src/wishbone_master.sv
-../src/wishbone_slave.sv
+../src/wb_xbar.sv
+../src/wb_master.sv
+../src/wb_slave.sv
 dual_ram.sv
 
 -I../includes
