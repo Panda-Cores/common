@@ -113,7 +113,7 @@ begin
             tmp_halt_n  = 1'b1;
             flush_o     = 1'b1;
             pc_o        = dbg_bus.data_dbg_dut;
-            if(tmp_halt_q || core_halted_q) begin
+            if(tmp_halt_q) begin
                 done_n    = 1'b1;
                 tmp_halt_n = 1'b0;
             end
