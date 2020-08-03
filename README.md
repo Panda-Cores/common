@@ -1,5 +1,7 @@
 # Common
 
+# !!!This repository is split up in multiple repos for each module and is no longer maintained!!!
+
 A collection of common components for the Panda cores
 
 # List of components
