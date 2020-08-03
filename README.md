@@ -1,10 +1,10 @@
 # Common
 
-# !!!This repository is split up in multiple repos for each module and is no longer maintained!!!
+## !!!This repository is split up into multiple repos for each module and is no longer maintained!!!
 
 A collection of common components for the Panda cores
 
-# List of components
+## List of components
 * Wishbone interconnect
 * Load-Store-Unit
 * Debug module
